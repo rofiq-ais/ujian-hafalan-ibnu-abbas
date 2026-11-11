@@ -3,7 +3,8 @@ import react from '@vitejs/plugin-react';
 import { neon } from '@neondatabase/serverless';
 import { onRequestGet as getSantri, onRequestPost as postSantri } from './functions/api/santri';
 import { onRequestGet as getPenilaian, onRequestPost as postPenilaian } from './functions/api/penilaian';
-import { onRequestGet as getPenguji } from './functions/api/penguji';
+import { onRequestGet as getPenguji, onRequestPost as postPenguji } from './functions/api/penguji';
+import { onRequestGet as getPengajar, onRequestPost as postPengajar } from './functions/api/pengajar';
 
 // https://vite.dev/config/
 export default defineConfig(({ mode }) => {
@@ -60,7 +61,9 @@ export default defineConfig(({ mode }) => {
               } else if (path === '/api/penilaian') {
                 response = method === 'POST' ? await postPenilaian(context) : await getPenilaian(context);
               } else if (path === '/api/penguji') {
-                response = await getPenguji(context);
+                response = method === 'POST' ? await postPenguji(context) : await getPenguji(context);
+              } else if (path === '/api/pengajar') {
+                response = method === 'POST' ? await postPengajar(context) : await getPengajar(context);
               } else {
                 res.statusCode = 404;
                 res.end(JSON.stringify({ error: 'Endpoint tidak ditemukan' }));

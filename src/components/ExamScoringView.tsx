@@ -16,12 +16,15 @@ import {
   Award
 } from 'lucide-react';
 
+import { PengujiItem } from '../services/api';
+
 interface ExamScoringViewProps {
   marhalah: Marhalah;
   kampus: Kampus;
   santriList: Santri[];
   penilaianList: PenilaianRecord[];
   activePengujiNama?: string;
+  pengujiList?: PengujiItem[];
   onSavePenilaian: (record: PenilaianRecord) => void;
   onViewRapor: (record: PenilaianRecord) => void;
 }
@@ -32,6 +35,7 @@ export const ExamScoringView: React.FC<ExamScoringViewProps> = ({
   santriList,
   penilaianList,
   activePengujiNama = 'Ust. Ahmad Fauzi',
+  pengujiList = [],
   onSavePenilaian,
   onViewRapor,
 }) => {
@@ -42,8 +46,16 @@ export const ExamScoringView: React.FC<ExamScoringViewProps> = ({
 
   // Form setup states
   const [selectedSantriId, setSelectedSantriId] = useState<string>('');
+  const [selectedPenguji, setSelectedPenguji] = useState<string>(activePengujiNama);
   const [jenisUjian, setJenisUjian] = useState<JenisUjian>('UAS');
   const [selectedJuz, setSelectedJuz] = useState<string[]>(['Juz 30', 'Juz 29']);
+
+  // Sync selectedPenguji if activePengujiNama changes
+  useEffect(() => {
+    if (activePengujiNama) {
+      setSelectedPenguji(activePengujiNama);
+    }
+  }, [activePengujiNama]);
 
   // Wizard state: 0 = setup, 1..totalSoal = scoring soal, totalSoal+1 = finish
   const [currentStep, setCurrentStep] = useState<number>(0);
@@ -200,7 +212,7 @@ export const ExamScoringView: React.FC<ExamScoringViewProps> = ({
       rataRata: agregat.rataRata,
       predikat: agregat.predikat,
       status: 'DRAFT',
-      pengujiNama: activePengujiNama || 'Ust. Penguji',
+      pengujiNama: selectedPenguji || activePengujiNama || 'Ust. Penguji',
       updatedAt: new Date().toLocaleString('id-ID', { dateStyle: 'short', timeStyle: 'short' }),
     };
 
@@ -236,7 +248,7 @@ export const ExamScoringView: React.FC<ExamScoringViewProps> = ({
       rataRata: agregat.rataRata,
       predikat: agregat.predikat,
       status: 'SELESAI',
-      pengujiNama: activePengujiNama || 'Ust. Penguji',
+      pengujiNama: selectedPenguji || activePengujiNama || 'Ust. Penguji',
       updatedAt: new Date().toLocaleString('id-ID', { dateStyle: 'short', timeStyle: 'short' }),
     };
 
@@ -314,6 +326,41 @@ export const ExamScoringView: React.FC<ExamScoringViewProps> = ({
           </div>
 
           <div className="p-5 sm:p-6 space-y-6">
+            {/* 0. Identitas Penguji yang Menyimak */}
+            <div className="bg-emerald-50/70 p-4 rounded-xl border border-emerald-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-xl bg-emerald-600 text-white flex items-center justify-center font-bold text-xs shrink-0 shadow-xs">
+                  Ust
+                </div>
+                <div>
+                  <label className="block text-xs font-black uppercase text-emerald-950 tracking-wider">
+                    Asatidz / Penguji yang Menyimak:
+                  </label>
+                  <p className="text-[11px] text-emerald-700">
+                    Nilai ujian santri akan resmi terdata disimak oleh penguji ini.
+                  </p>
+                </div>
+              </div>
+
+              <div className="w-full sm:w-auto">
+                <select
+                  value={selectedPenguji}
+                  onChange={(e) => setSelectedPenguji(e.target.value)}
+                  className="w-full sm:w-auto px-3.5 py-2 rounded-xl border border-emerald-300 bg-white text-xs font-extrabold text-slate-800 focus:ring-2 focus:ring-emerald-500 shadow-xs"
+                >
+                  {pengujiList.length > 0 ? (
+                    pengujiList.map(p => (
+                      <option key={p.id} value={p.nama}>
+                        {p.nama} {p.tipeAsal ? `(${p.tipeAsal})` : ''}
+                      </option>
+                    ))
+                  ) : (
+                    <option value={selectedPenguji}>{selectedPenguji}</option>
+                  )}
+                </select>
+              </div>
+            </div>
+
             {/* 1. Jenis Ujian */}
             <div>
               <label className="block text-xs font-extrabold text-slate-700 uppercase tracking-wider mb-2">

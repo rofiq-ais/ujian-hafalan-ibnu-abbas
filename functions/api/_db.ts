@@ -52,6 +52,37 @@ export async function ensureTahfidzTables(sql: any) {
     await sql`CREATE INDEX IF NOT EXISTS idx_santri_unit ON santri(marhalah, kampus)`;
     await sql`CREATE INDEX IF NOT EXISTS idx_santri_kelas ON santri(kelas)`;
 
+    // 2. Table Pengajar (Guru / Asatidz yang bukan musyrif atau umum)
+    await sql`
+      CREATE TABLE IF NOT EXISTS pengajar (
+        id VARCHAR(64) PRIMARY KEY,
+        nama VARCHAR(255) NOT NULL,
+        panggilan VARCHAR(128),
+        phone VARCHAR(32),
+        gender VARCHAR(16) NOT NULL DEFAULT 'IKHWAN', -- 'IKHWAN' (Banin), 'AKHWAT' (Banat)
+        kampus VARCHAR(32) NOT NULL DEFAULT 'BANIN',   -- 'BANIN', 'BANAT'
+        marhalah VARCHAR(32) NOT NULL DEFAULT 'SEMUA', -- 'MI', 'ULA_MTS', 'SEMUA'
+        mapel VARCHAR(128) DEFAULT 'Tahfidz Al-Qur''an',
+        is_active BOOLEAN DEFAULT true,
+        created_at TIMESTAMP WITHOUT TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP WITHOUT TIME ZONE DEFAULT CURRENT_TIMESTAMP
+      )
+    `;
+
+    // 3. Table Penugasan Penguji Ujian (Assigning Musyrif / Pengajar as Examiners)
+    await sql`
+      CREATE TABLE IF NOT EXISTS tahfidz_penguji (
+        id VARCHAR(64) PRIMARY KEY,
+        nama VARCHAR(255) NOT NULL,
+        tipe_asal VARCHAR(32) NOT NULL, -- 'MUSYRIF' atau 'PENGAJAR'
+        ref_id VARCHAR(64),            -- ID musyrif atau pengajar
+        kampus VARCHAR(32) NOT NULL,    -- 'BANIN', 'BANAT'
+        marhalah VARCHAR(32) NOT NULL DEFAULT 'SEMUA', -- 'MI', 'ULA_MTS', 'SEMUA'
+        is_penguji_aktif BOOLEAN DEFAULT true,
+        created_at TIMESTAMP WITHOUT TIME ZONE DEFAULT CURRENT_TIMESTAMP
+      )
+    `;
+
     // 2. Table Penilaian Ujian
     await sql`
       CREATE TABLE IF NOT EXISTS tahfidz_penilaian (

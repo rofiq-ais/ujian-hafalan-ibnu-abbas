@@ -21,13 +21,13 @@ export function App() {
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
   // Load initial data from Neon Postgres
-  const loadData = async () => {
+  const loadData = async (targetKampus = kampus, targetMarhalah = marhalah) => {
     setIsLoading(true);
     try {
       const [santriData, penilaianData, pengujiData] = await Promise.all([
         api.getSantri(),
         api.getPenilaian(),
-        api.getPenguji(),
+        api.getPenguji(targetKampus, targetMarhalah),
       ]);
 
       if (santriData && santriData.length > 0) {
@@ -38,7 +38,10 @@ export function App() {
       }
       if (pengujiData && pengujiData.length > 0) {
         setPengujiList(pengujiData);
-        setActivePengujiNama(pengujiData[0].nama);
+        // If current active penguji is not in the list, set to first
+        if (!pengujiData.some(p => p.nama === activePengujiNama)) {
+          setActivePengujiNama(pengujiData[0].nama);
+        }
       }
     } catch (err) {
       console.warn('Fallback to mock data:', err);
@@ -48,8 +51,8 @@ export function App() {
   };
 
   useEffect(() => {
-    loadData();
-  }, []);
+    loadData(kampus, marhalah);
+  }, [kampus, marhalah]);
 
   const handleSavePenilaian = async (record: PenilaianRecord) => {
     // 1. Optimistic UI update
@@ -108,6 +111,7 @@ export function App() {
             santriList={santriList}
             penilaianList={penilaianList}
             activePengujiNama={activePengujiNama}
+            pengujiList={pengujiList}
             onSavePenilaian={handleSavePenilaian}
             onViewRapor={handleViewRapor}
           />

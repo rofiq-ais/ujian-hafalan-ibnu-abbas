@@ -3,13 +3,31 @@ import { MOCK_SANTRI, MOCK_PENILAIAN } from '../data/mockData';
 
 export interface PengujiItem {
   id: string;
+  refId?: string;
   nama: string;
   panggilan?: string;
-  role: string;
+  tipeAsal?: 'MUSYRIF' | 'PENGAJAR';
+  kampus?: Kampus;
+  marhalah?: string;
+  isPengujiAktif?: boolean;
+  keterangan?: string;
+  role?: string;
+}
+
+export interface PengajarItem {
+  id: string;
+  nama: string;
+  panggilan?: string;
+  phone?: string;
+  gender: 'IKHWAN' | 'AKHWAT';
+  kampus: Kampus;
+  marhalah: string;
+  mapel: string;
+  isActive: boolean;
 }
 
 export const api = {
-  // 1. Ambil data santri
+  // 1. Data Santri
   async getSantri(marhalah?: Marhalah, kampus?: Kampus): Promise<Santri[]> {
     try {
       const params = new URLSearchParams();
@@ -30,7 +48,6 @@ export const api = {
     }
   },
 
-  // 2. Tambah / Import Santri
   async saveSantri(items: Partial<Santri>[] | Partial<Santri>): Promise<{ success: boolean; count?: number }> {
     try {
       const res = await fetch('/api/santri', {
@@ -46,10 +63,46 @@ export const api = {
     }
   },
 
-  // 3. Ambil data penguji dari tabel musyrif
-  async getPenguji(): Promise<PengujiItem[]> {
+  // 2. Data Pengajar
+  async getPengajar(kampus?: Kampus, marhalah?: Marhalah): Promise<PengajarItem[]> {
     try {
-      const res = await fetch('/api/penguji');
+      const params = new URLSearchParams();
+      if (kampus) params.append('kampus', kampus);
+      if (marhalah) params.append('marhalah', marhalah);
+
+      const res = await fetch(`/api/pengajar?${params.toString()}`);
+      if (!res.ok) throw new Error('Failed to fetch pengajar');
+      const data = await res.json();
+      return data.pengajar || [];
+    } catch (err) {
+      console.warn('API getPengajar error:', err);
+      return [];
+    }
+  },
+
+  async savePengajar(data: Partial<PengajarItem>): Promise<{ success: boolean; id?: string }> {
+    try {
+      const res = await fetch('/api/pengajar', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      });
+      if (!res.ok) throw new Error('Failed to save pengajar');
+      return await res.json();
+    } catch (err) {
+      console.error('API savePengajar error:', err);
+      throw err;
+    }
+  },
+
+  // 3. Penguji & Kandidat Setting
+  async getPenguji(kampus?: Kampus, marhalah?: Marhalah): Promise<PengujiItem[]> {
+    try {
+      const params = new URLSearchParams();
+      if (kampus) params.append('kampus', kampus);
+      if (marhalah) params.append('marhalah', marhalah);
+
+      const res = await fetch(`/api/penguji?${params.toString()}`);
       if (!res.ok) throw new Error('Failed to fetch penguji');
       const data = await res.json();
       return data.penguji || [];
@@ -58,13 +111,45 @@ export const api = {
       return [
         { id: '1', nama: 'Ust. Ahmad Fauzi, Lc.', role: 'PENGUJI' },
         { id: '2', nama: 'Ust. Nurul Huda, S.Pd.I.', role: 'PENGUJI' },
-        { id: '3', nama: 'Ust. Ridwan Kamil, S.Th.I.', role: 'PENGUJI' },
-        { id: '4', nama: 'Usth. Maryam, S.Ag.', role: 'PENGUJI' },
       ];
     }
   },
 
-  // 4. Ambil riwayat penilaian
+  async getKandidatPenguji(): Promise<PengujiItem[]> {
+    try {
+      const res = await fetch('/api/penguji?forSettings=true');
+      if (!res.ok) throw new Error('Failed to fetch candidates');
+      const data = await res.json();
+      return data.kandidat || [];
+    } catch (err) {
+      console.warn('API getKandidatPenguji error:', err);
+      return [];
+    }
+  },
+
+  async setPengujiStatus(item: {
+    refId: string;
+    nama: string;
+    tipeAsal: 'MUSYRIF' | 'PENGAJAR';
+    kampus: Kampus;
+    marhalah?: string;
+    isPengujiAktif: boolean;
+  }): Promise<{ success: boolean; message: string }> {
+    try {
+      const res = await fetch('/api/penguji', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(item),
+      });
+      if (!res.ok) throw new Error('Failed to update penguji status');
+      return await res.json();
+    } catch (err) {
+      console.error('API setPengujiStatus error:', err);
+      throw err;
+    }
+  },
+
+  // 4. Riwayat & Simpan Penilaian
   async getPenilaian(marhalah?: Marhalah, kampus?: Kampus, santriId?: string, jenisUjian?: JenisUjian): Promise<PenilaianRecord[]> {
     try {
       const params = new URLSearchParams();
@@ -83,7 +168,6 @@ export const api = {
     }
   },
 
-  // 5. Simpan penilaian (Draft cicilan atau Selesai)
   async savePenilaian(record: PenilaianRecord): Promise<{ success: boolean; id: string; message: string }> {
     try {
       const res = await fetch('/api/penilaian', {

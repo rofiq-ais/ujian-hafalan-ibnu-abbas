@@ -1,0 +1,1 @@
+{"root":["./src/App.tsx","./src/main.tsx","./src/components/ExamScoringView.tsx","./src/components/MasterDataView.tsx","./src/components/MasterRecapView.tsx","./src/components/Navbar.tsx","./src/components/ReportCardView.tsx","./src/data/mockData.ts","./src/services/api.ts","./src/types/index.ts","./src/utils/scoring.ts"],"version":"5.7.3"}

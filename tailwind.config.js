@@ -6,6 +6,13 @@ export default {
   ],
   theme: {
     extend: {
+      screens: {
+        'xs': '420px',
+      },
+      fontFamily: {
+        sans: ['"Plus Jakarta Sans"', 'system-ui', '-apple-system', 'sans-serif'],
+        serif: ['"Amiri"', 'Georgia', 'serif'],
+      },
       colors: {
         pondok: {
           50: '#ecfdf5',

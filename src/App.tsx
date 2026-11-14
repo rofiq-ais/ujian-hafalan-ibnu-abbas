@@ -7,20 +7,22 @@ import { ExamScoringView } from './components/ExamScoringView';
 import { ReportCardView } from './components/ReportCardView';
 import { MasterRecapView } from './components/MasterRecapView';
 import { MasterDataView } from './components/MasterDataView';
-import { RefreshCw } from 'lucide-react';
+import { RumusModal } from './components/RumusModal';
+import { RefreshCw, CheckCircle2 } from 'lucide-react';
 
 export function App() {
   const [marhalah, setMarhalah] = useState<Marhalah>('ULA_MTS');
   const [kampus, setKampus] = useState<Kampus>('BANIN');
   const [activeTab, setActiveTab] = useState<'input' | 'rapor' | 'rekap' | 'master'>('input');
+  const [showRumusModal, setShowRumusModal] = useState<boolean>(false);
 
   const [santriList, setSantriList] = useState<Santri[]>(MOCK_SANTRI);
   const [penilaianList, setPenilaianList] = useState<PenilaianRecord[]>(MOCK_PENILAIAN);
   const [pengujiList, setPengujiList] = useState<PengujiItem[]>([]);
-  const [activePengujiNama, setActivePengujiNama] = useState<string>('Ust. Ahmad Fauzi');
+  const [activePengujiNama, setActivePengujiNama] = useState<string>('Ust. Ahmad Fauzi, Lc.');
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
-  // Load initial data from Neon Postgres
+  // Load initial data from Neon Postgres / local fallback
   const loadData = async (targetKampus = kampus, targetMarhalah = marhalah) => {
     setIsLoading(true);
     try {
@@ -38,13 +40,12 @@ export function App() {
       }
       if (pengujiData && pengujiData.length > 0) {
         setPengujiList(pengujiData);
-        // If current active penguji is not in the list, set to first
         if (!pengujiData.some(p => p.nama === activePengujiNama)) {
           setActivePengujiNama(pengujiData[0].nama);
         }
       }
     } catch (err) {
-      console.warn('Fallback to mock data:', err);
+      console.warn('Fallback to local mock data:', err);
     } finally {
       setIsLoading(false);
     }
@@ -93,10 +94,11 @@ export function App() {
         pengujiList={pengujiList}
         activePengujiNama={activePengujiNama}
         setActivePengujiNama={setActivePengujiNama}
+        onOpenRumus={() => setShowRumusModal(true)}
       />
 
-      {/* Main Content View */}
-      <main className="flex-1 pb-12">
+      {/* Main Content View with safe bottom padding for mobile navigation */}
+      <main className="flex-1 pb-24 md:pb-12">
         {isLoading && (
           <div className="max-w-7xl mx-auto px-4 py-2 text-center text-xs text-emerald-800 bg-emerald-50 border-b border-emerald-100 flex items-center justify-center gap-2">
             <RefreshCw className="w-3.5 h-3.5 animate-spin text-emerald-600" />
@@ -104,57 +106,66 @@ export function App() {
           </div>
         )}
 
-        {activeTab === 'input' && (
-          <ExamScoringView
-            marhalah={marhalah}
-            kampus={kampus}
-            santriList={santriList}
-            penilaianList={penilaianList}
-            activePengujiNama={activePengujiNama}
-            pengujiList={pengujiList}
-            onSavePenilaian={handleSavePenilaian}
-            onViewRapor={handleViewRapor}
-          />
-        )}
+        <div key={activeTab} className="animate-fade-up">
+          {activeTab === 'input' && (
+            <ExamScoringView
+              marhalah={marhalah}
+              kampus={kampus}
+              santriList={santriList}
+              penilaianList={penilaianList}
+              activePengujiNama={activePengujiNama}
+              pengujiList={pengujiList}
+              onSavePenilaian={handleSavePenilaian}
+              onViewRapor={handleViewRapor}
+            />
+          )}
 
-        {activeTab === 'rapor' && (
-          <ReportCardView
-            marhalah={marhalah}
-            kampus={kampus}
-            penilaianList={penilaianList}
-          />
-        )}
+          {activeTab === 'rapor' && (
+            <ReportCardView
+              marhalah={marhalah}
+              kampus={kampus}
+              penilaianList={penilaianList}
+              onNavigateToInput={() => setActiveTab('input')}
+            />
+          )}
 
-        {activeTab === 'rekap' && (
-          <MasterRecapView
-            marhalah={marhalah}
-            kampus={kampus}
-            penilaianList={penilaianList}
-          />
-        )}
+          {activeTab === 'rekap' && (
+            <MasterRecapView
+              marhalah={marhalah}
+              kampus={kampus}
+              penilaianList={penilaianList}
+            />
+          )}
 
-        {activeTab === 'master' && (
-          <MasterDataView
-            marhalah={marhalah}
-            kampus={kampus}
-            santriList={santriList}
-            onRefresh={loadData}
-          />
-        )}
+          {activeTab === 'master' && (
+            <MasterDataView
+              marhalah={marhalah}
+              kampus={kampus}
+              santriList={santriList}
+              onRefresh={loadData}
+            />
+          )}
+        </div>
       </main>
+
+      {/* Interactive Guidelines & Formula Modal */}
+      <RumusModal
+        isOpen={showRumusModal}
+        onClose={() => setShowRumusModal(false)}
+      />
 
       {/* Footer */}
       <footer className="bg-white border-t border-slate-200 py-6 text-center text-xs text-slate-500 no-print">
         <div className="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-3">
-          <p className="font-semibold text-slate-700">
+          <p className="font-extrabold text-slate-700">
             Sistem Evaluasi Ujian Hafalan Al-Qur'an • Ma'had Ibnu Abbas
           </p>
           <div className="flex items-center gap-3 text-[11px] text-slate-400">
-            <span>MI & Ula/MTs</span>
+            <span>MI & Ula / MTs</span>
             <span>•</span>
             <span>Kampus Banin & Banat</span>
             <span>•</span>
-            <span className="font-mono text-emerald-700 font-bold">Terhubung ke Database Neon Bersama</span>
+            <span className="font-mono text-emerald-700 font-bold">Terhubung ke Database Neon Postgres</span>
           </div>
         </div>
       </footer>

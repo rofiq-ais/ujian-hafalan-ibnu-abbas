@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { Santri, Marhalah, Kampus } from '../types';
 import {
   Users,
@@ -6,14 +6,19 @@ import {
   Plus,
   Upload,
   Check,
-  UserCheck,
-  BookOpen,
   Briefcase,
   ShieldCheck,
   CheckCircle2,
   XCircle,
-  HelpCircle,
-  School
+  Download,
+  FileSpreadsheet,
+  X,
+  User,
+  GraduationCap,
+  Sparkles,
+  BookOpen,
+  School,
+  BadgeCheck
 } from 'lucide-react';
 import { api, PengajarItem, PengujiItem } from '../services/api';
 
@@ -56,6 +61,10 @@ export const MasterDataView: React.FC<MasterDataViewProps> = ({
   const [kampusPengajar, setKampusPengajar] = useState<Kampus>(kampus);
   const [genderPengajar, setGenderPengajar] = useState<'IKHWAN' | 'AKHWAT'>(kampus === 'BANAT' ? 'AKHWAT' : 'IKHWAN');
 
+  // File Upload Ref
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [importedRows, setImportedRows] = useState<any[]>([]);
+
   // State Pengajar & Kandidat Penguji
   const [pengajarList, setPengajarList] = useState<PengajarItem[]>([]);
   const [kandidatPenguji, setKandidatPenguji] = useState<PengujiItem[]>([]);
@@ -88,7 +97,8 @@ export const MasterDataView: React.FC<MasterDataViewProps> = ({
       .filter(s =>
         s.nama.toLowerCase().includes(searchTerm.toLowerCase()) ||
         s.nisn.includes(searchTerm) ||
-        s.kelas.toLowerCase().includes(searchTerm.toLowerCase())
+        s.kelas.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (s.halaqah && s.halaqah.toLowerCase().includes(searchTerm.toLowerCase()))
       );
   }, [santriList, marhalah, kampus, searchTerm]);
 
@@ -96,7 +106,8 @@ export const MasterDataView: React.FC<MasterDataViewProps> = ({
   const filteredPengajar = useMemo(() => {
     return pengajarList.filter(p =>
       p.nama.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      p.mapel.toLowerCase().includes(searchTerm.toLowerCase())
+      p.mapel.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (p.panggilan && p.panggilan.toLowerCase().includes(searchTerm.toLowerCase()))
     );
   }, [pengajarList, searchTerm]);
 
@@ -104,23 +115,24 @@ export const MasterDataView: React.FC<MasterDataViewProps> = ({
   const filteredKandidat = useMemo(() => {
     return kandidatPenguji.filter(k =>
       k.nama.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      k.tipeAsal?.toLowerCase().includes(searchTerm.toLowerCase())
+      (k.tipeAsal && k.tipeAsal.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (k.panggilan && k.panggilan.toLowerCase().includes(searchTerm.toLowerCase()))
     );
   }, [kandidatPenguji, searchTerm]);
 
   // Handle Tambah Santri
   const handleTambahSantri = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!namaSantri) return;
+    if (!namaSantri.trim()) return;
 
     setIsSubmitting(true);
     try {
       await api.saveSantri({
-        nama: namaSantri,
-        nisn: nisnSantri || '-',
+        nama: namaSantri.trim(),
+        nisn: nisnSantri.trim() || String(Math.floor(1000000000 + Math.random() * 9000000000)),
         kelas: kelasSantri,
-        halaqah: halaqahSantri || 'Umum',
-        targetJuz: targetJuzSantri,
+        halaqah: halaqahSantri.trim() || 'Umum',
+        targetJuz: targetJuzSantri.trim() || 'Juz 30',
         marhalah,
         kampus,
       });
@@ -140,13 +152,13 @@ export const MasterDataView: React.FC<MasterDataViewProps> = ({
   // Handle Tambah Pengajar
   const handleTambahPengajar = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!namaPengajar) return;
+    if (!namaPengajar.trim()) return;
 
     setIsSubmitting(true);
     try {
       await api.savePengajar({
-        nama: namaPengajar,
-        panggilan: panggilanPengajar || namaPengajar,
+        nama: namaPengajar.trim(),
+        panggilan: panggilanPengajar.trim() || namaPengajar.trim(),
         mapel: mapelPengajar,
         kampus: kampusPengajar,
         gender: genderPengajar,
@@ -170,7 +182,6 @@ export const MasterDataView: React.FC<MasterDataViewProps> = ({
   // Toggle Status Penguji
   const handleTogglePenguji = async (kandidat: PengujiItem) => {
     const nextStatus = !kandidat.isPengujiAktif;
-    // Optimistic UI update
     setKandidatPenguji(prev =>
       prev.map(k => (k.id === kandidat.id ? { ...k, isPengujiAktif: nextStatus } : k))
     );
@@ -187,73 +198,151 @@ export const MasterDataView: React.FC<MasterDataViewProps> = ({
       if (onRefresh) onRefresh();
     } catch (err: any) {
       alert('Gagal memperbarui status penguji: ' + err.message);
-      // Revert if error
       setKandidatPenguji(prev =>
         prev.map(k => (k.id === kandidat.id ? { ...k, isPengujiAktif: !nextStatus } : k))
       );
     }
   };
 
+  // CSV Import file parser
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const text = event.target?.result as string;
+      if (!text) return;
+
+      const lines = text.split(/\r?\n/).filter(line => line.trim() !== '');
+      if (lines.length <= 1) {
+        alert('File CSV kosong atau hanya berisi baris header.');
+        return;
+      }
+
+      // Parse lines (skipping header)
+      const parsed: any[] = [];
+      for (let i = 1; i < lines.length; i++) {
+        const parts = lines[i].split(',').map(p => p.trim().replace(/^["']|["']$/g, ''));
+        if (parts.length >= 2 && parts[0]) {
+          parsed.push({
+            nama: parts[0],
+            nisn: parts[1] || '-',
+            kelas: parts[2] || (marhalah === 'MI' ? '5A MI' : '7A Ula/MTs'),
+            halaqah: parts[3] || 'Umum',
+            targetJuz: parts[4] || 'Juz 30',
+            marhalah,
+            kampus,
+          });
+        }
+      }
+      setImportedRows(parsed);
+    };
+    reader.readAsText(file);
+  };
+
+  const handleDownloadTemplate = () => {
+    const templateCSV = '\uFEFFNama Santri,NISN,Kelas,Halaqah,Target Kurikulum\nMuhammad Abdullah,0081234567,7A Ula/MTs,Halaqah Abu Bakar,Juz 30, Juz 29\nFatimah Azzahra,0081234568,7B Ula/MTs,Halaqah Khadijah,Juz 30';
+    const blob = new Blob([templateCSV], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', 'Template_Import_Santri_Ibnu_Abbas.csv');
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const handleCommitImport = async () => {
+    if (importedRows.length === 0) return;
+    setIsSubmitting(true);
+    try {
+      await api.saveSantri(importedRows);
+      alert(`Alhamdulillah, berhasil mengimport ${importedRows.length} data santri ke sistem!`);
+      setShowImportModal(false);
+      setImportedRows([]);
+      if (onRefresh) onRefresh();
+    } catch (err: any) {
+      alert('Gagal mengimport data: ' + err.message);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   return (
-    <div className="max-w-6xl mx-auto p-4 sm:p-6 space-y-6">
+    <div className="max-w-6xl mx-auto p-3 sm:p-6 space-y-5">
       {/* Header & Sub-Tab Bar */}
-      <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-5 space-y-4">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="bg-white rounded-3xl shadow-sm border border-slate-200/90 p-4 sm:p-6 space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
-            <h2 className="text-lg font-black text-slate-900">
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] font-black uppercase tracking-wider text-emerald-800 bg-emerald-100 px-2.5 py-0.5 rounded-full inline-block">
+                Master Database
+              </span>
+              <span className="text-xs font-bold text-slate-500">
+                {marhalah === 'MI' ? 'Madrasah Ibtidaiyah' : 'Ula / MTs'} • {kampus === 'BANIN' ? 'Kampus Banin (Putra)' : 'Kampus Banat (Putri)'}
+              </span>
+            </div>
+            <h2 className="text-lg sm:text-xl font-black text-slate-900 mt-1">
               Pusat Manajemen Data & Petugas Ujian
             </h2>
             <p className="text-xs text-slate-500">
-              Unit: {marhalah === 'MI' ? 'Madrasah Ibtidaiyah' : 'Ula / MTs'} — Kampus {kampus === 'BANIN' ? 'Banin (Putra)' : 'Banat (Putri)'}
+              Kelola master santri peserta ujian, database asatidz, dan penugasan penguji resmi.
             </p>
           </div>
 
-          <div className="flex items-center gap-2">
+          {/* Action Buttons Header */}
+          <div className="flex flex-wrap items-center gap-2">
             {subTab === 'santri' && (
               <>
                 <button
+                  type="button"
                   onClick={() => setShowImportModal(true)}
-                  className="px-3.5 py-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 text-xs font-bold rounded-xl border border-emerald-200 transition flex items-center gap-1.5"
+                  className="flex-1 sm:flex-none px-3.5 py-2.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 text-xs font-black rounded-xl border border-emerald-300 transition flex items-center justify-center gap-1.5 active:scale-95 btn-tactile"
                 >
-                  <Upload className="w-3.5 h-3.5" />
-                  <span>Import Excel</span>
+                  <Upload className="w-3.5 h-3.5 text-emerald-700 shrink-0" />
+                  <span className="truncate">Import CSV</span>
                 </button>
                 <button
+                  type="button"
                   onClick={() => setShowAddSantriModal(true)}
-                  className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl shadow-sm transition flex items-center gap-1.5"
+                  className="flex-1 sm:flex-none px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black rounded-xl shadow-md transition flex items-center justify-center gap-1.5 active:scale-95 btn-tactile"
                 >
-                  <Plus className="w-3.5 h-3.5" />
-                  <span>Tambah Santri</span>
+                  <Plus className="w-3.5 h-3.5 shrink-0" />
+                  <span className="truncate">Tambah Santri</span>
                 </button>
               </>
             )}
 
             {subTab === 'pengajar' && (
               <button
+                type="button"
                 onClick={() => setShowAddPengajarModal(true)}
-                className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl shadow-sm transition flex items-center gap-1.5"
+                className="w-full sm:w-auto px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black rounded-xl shadow-md transition flex items-center justify-center gap-1.5 active:scale-95 btn-tactile"
               >
-                <Plus className="w-3.5 h-3.5" />
+                <Plus className="w-3.5 h-3.5 shrink-0" />
                 <span>Tambah Pengajar Baru</span>
               </button>
             )}
           </div>
         </div>
 
-        {/* Sub-Tab Navigation */}
-        <div className="flex border-b border-slate-200 gap-6 pt-2">
+        {/* Modern Segmented Sub-Tab Controls */}
+        <div className="grid grid-cols-3 gap-1.5 sm:gap-2 p-1.5 bg-slate-100 rounded-2xl">
           <button
             type="button"
             onClick={() => setSubTab('santri')}
-            className={`pb-2.5 text-xs font-extrabold transition-all border-b-2 flex items-center gap-2 ${
+            className={`py-2 sm:py-2.5 px-2 rounded-xl text-xs font-black transition-all flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 ${
               subTab === 'santri'
-                ? 'border-emerald-600 text-emerald-800'
-                : 'border-transparent text-slate-500 hover:text-slate-800'
+                ? 'bg-white text-emerald-800 shadow-sm'
+                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/50'
             }`}
           >
-            <Users className="w-4 h-4" />
-            <span>1. Data Santri Peserta</span>
-            <span className="bg-slate-100 text-slate-700 px-2 py-0.5 rounded-full text-[10px]">
+            <Users className="w-4 h-4 shrink-0" />
+            <span className="truncate">1. Data Santri</span>
+            <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-mono ${
+              subTab === 'santri' ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-200 text-slate-600'
+            }`}>
               {filteredSantri.length}
             </span>
           </button>
@@ -261,15 +350,17 @@ export const MasterDataView: React.FC<MasterDataViewProps> = ({
           <button
             type="button"
             onClick={() => setSubTab('pengajar')}
-            className={`pb-2.5 text-xs font-extrabold transition-all border-b-2 flex items-center gap-2 ${
+            className={`py-2 sm:py-2.5 px-2 rounded-xl text-xs font-black transition-all flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 ${
               subTab === 'pengajar'
-                ? 'border-emerald-600 text-emerald-800'
-                : 'border-transparent text-slate-500 hover:text-slate-800'
+                ? 'bg-white text-emerald-800 shadow-sm'
+                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/50'
             }`}
           >
-            <Briefcase className="w-4 h-4" />
-            <span>2. Data Pengajar / Asatidz</span>
-            <span className="bg-slate-100 text-slate-700 px-2 py-0.5 rounded-full text-[10px]">
+            <Briefcase className="w-4 h-4 shrink-0" />
+            <span className="truncate">2. Asatidz KBM</span>
+            <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-mono ${
+              subTab === 'pengajar' ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-200 text-slate-600'
+            }`}>
               {pengajarList.length}
             </span>
           </button>
@@ -277,23 +368,25 @@ export const MasterDataView: React.FC<MasterDataViewProps> = ({
           <button
             type="button"
             onClick={() => setSubTab('penguji')}
-            className={`pb-2.5 text-xs font-extrabold transition-all border-b-2 flex items-center gap-2 ${
+            className={`py-2 sm:py-2.5 px-2 rounded-xl text-xs font-black transition-all flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 ${
               subTab === 'penguji'
-                ? 'border-emerald-600 text-emerald-800'
-                : 'border-transparent text-slate-500 hover:text-slate-800'
+                ? 'bg-white text-emerald-800 shadow-sm'
+                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/50'
             }`}
           >
-            <ShieldCheck className="w-4 h-4" />
-            <span>3. Setting Penugasan Penguji Ujian</span>
-            <span className="bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full text-[10px] font-black">
-              {kandidatPenguji.filter(k => k.isPengujiAktif).length} Penguji Aktif
+            <ShieldCheck className="w-4 h-4 shrink-0" />
+            <span className="truncate">3. Tim Penguji</span>
+            <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-mono ${
+              subTab === 'penguji' ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-200 text-slate-600'
+            }`}>
+              {kandidatPenguji.filter(k => k.isPengujiAktif).length} Aktif
             </span>
           </button>
         </div>
       </div>
 
-      {/* Quick Search */}
-      <div className="bg-white rounded-2xl p-4 shadow-sm border border-slate-200 flex items-center gap-3">
+      {/* Quick Search Bar */}
+      <div className="bg-white rounded-2xl p-3 sm:p-3.5 shadow-sm border border-slate-200/90 flex items-center gap-3">
         <Search className="w-4 h-4 text-slate-400 shrink-0" />
         <input
           type="text"
@@ -301,15 +394,18 @@ export const MasterDataView: React.FC<MasterDataViewProps> = ({
           onChange={(e) => setSearchTerm(e.target.value)}
           placeholder={
             subTab === 'santri'
-              ? 'Cari nama santri, NISN, atau kelas...'
+              ? 'Cari nama santri, NISN, kelas, atau halaqah...'
               : subTab === 'pengajar'
-              ? 'Cari nama pengajar atau mata pelajaran...'
-              : 'Cari nama musyrif atau pengajar penguji...'
+              ? 'Cari nama pengajar, panggilan, atau mata pelajaran...'
+              : 'Cari nama calon penguji atau musyrif...'
           }
-          className="w-full text-xs font-medium text-slate-800 focus:outline-none placeholder:text-slate-400"
+          className="w-full text-xs font-medium text-slate-800 focus:outline-none placeholder:text-slate-400 bg-transparent"
         />
         {searchTerm && (
-          <button onClick={() => setSearchTerm('')} className="text-xs text-slate-400 hover:text-slate-600">
+          <button
+            onClick={() => setSearchTerm('')}
+            className="w-5 h-5 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 text-xs flex items-center justify-center shrink-0"
+          >
             ✕
           </button>
         )}
@@ -317,153 +413,319 @@ export const MasterDataView: React.FC<MasterDataViewProps> = ({
 
       {/* TAB 1: DATA SANTRI */}
       {subTab === 'santri' && (
-        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full text-xs text-left border-collapse">
-              <thead className="bg-slate-50 text-slate-700 uppercase font-bold border-b border-slate-200">
-                <tr>
-                  <th className="px-4 py-3 text-center w-12">No</th>
-                  <th className="px-4 py-3">Nama Santri</th>
-                  <th className="px-4 py-3">NISN</th>
-                  <th className="px-4 py-3">Kelas</th>
-                  <th className="px-4 py-3">Halaqah</th>
-                  <th className="px-4 py-3">Target Kurikulum</th>
-                  <th className="px-4 py-3 text-center">Status</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
+        <div className="space-y-4">
+          {filteredSantri.length === 0 ? (
+            <div className="bg-white rounded-3xl p-10 text-center border border-slate-200/90 text-slate-400">
+              <Users className="w-10 h-10 mx-auto mb-2 opacity-30 text-emerald-600" />
+              <p className="font-bold text-sm text-slate-700">Tidak ada santri yang cocok</p>
+              <p className="text-xs text-slate-400 mt-1">
+                {searchTerm ? 'Coba periksa kembali kata kunci pencarian Anda.' : 'Belum ada data santri pada unit ini.'}
+              </p>
+            </div>
+          ) : (
+            <>
+              {/* A. Tampilan Desktop Table (md:block) */}
+              <div className="hidden md:block bg-white rounded-3xl shadow-sm border border-slate-200/90 overflow-hidden">
+                <table className="w-full text-xs text-left border-collapse">
+                  <thead className="bg-slate-50 text-slate-700 uppercase font-black border-b border-slate-200">
+                    <tr>
+                      <th className="px-4 py-3.5 text-center w-12">No</th>
+                      <th className="px-4 py-3.5">Nama Santri</th>
+                      <th className="px-4 py-3.5">NISN</th>
+                      <th className="px-4 py-3.5">Kelas</th>
+                      <th className="px-4 py-3.5">Halaqah</th>
+                      <th className="px-4 py-3.5">Target Kurikulum</th>
+                      <th className="px-4 py-3.5 text-center">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {filteredSantri.map((s, idx) => (
+                      <tr key={s.id} className="hover:bg-slate-50 transition">
+                        <td className="px-4 py-3 text-center font-bold text-slate-400">{idx + 1}</td>
+                        <td className="px-4 py-3">
+                          <div className="font-extrabold text-slate-900">{s.nama}</div>
+                        </td>
+                        <td className="px-4 py-3 font-mono text-slate-600">{s.nisn}</td>
+                        <td className="px-4 py-3 font-semibold text-slate-700">
+                          <span className="px-2 py-0.5 rounded bg-slate-100 border border-slate-200 text-slate-700 text-[11px] font-bold">
+                            {s.kelas}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-slate-600">{s.halaqah || 'Umum'}</td>
+                        <td className="px-4 py-3">
+                          <span className="px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-800 text-[10px] font-bold border border-emerald-200 inline-block">
+                            {s.targetJuz || 'Juz 30'}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-center">
+                          <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200">
+                            <Check className="w-3 h-3" />
+                            Aktif
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* B. Tampilan Mobile Cards (md:hidden) */}
+              <div className="md:hidden space-y-2.5">
                 {filteredSantri.map((s, idx) => (
-                  <tr key={s.id} className="hover:bg-slate-50 transition">
-                    <td className="px-4 py-3 text-center font-bold text-slate-400">{idx + 1}</td>
-                    <td className="px-4 py-3 font-bold text-slate-900">{s.nama}</td>
-                    <td className="px-4 py-3 font-mono text-slate-600">{s.nisn}</td>
-                    <td className="px-4 py-3 font-semibold text-slate-700">{s.kelas}</td>
-                    <td className="px-4 py-3 text-slate-600">{s.halaqah || 'Umum'}</td>
-                    <td className="px-4 py-3">
-                      <span className="px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 text-[10px] font-bold">
-                        {s.targetJuz || 'Juz 30'}
+                  <div
+                    key={s.id}
+                    className="p-3.5 rounded-2xl bg-white border border-slate-200 shadow-2xs space-y-2.5"
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <div className="w-8 h-8 rounded-xl bg-emerald-100 text-emerald-800 font-black text-xs flex items-center justify-center shrink-0">
+                          {s.nama.charAt(0)}
+                        </div>
+                        <div className="min-w-0">
+                          <h4 className="font-black text-xs text-slate-900 truncate">{s.nama}</h4>
+                          <span className="text-[10px] font-mono text-slate-500">NISN: {s.nisn}</span>
+                        </div>
+                      </div>
+                      <span className="px-2 py-0.5 rounded bg-slate-100 text-slate-700 font-bold text-[10px] border border-slate-200 shrink-0">
+                        {s.kelas}
                       </span>
-                    </td>
-                    <td className="px-4 py-3 text-center">
-                      <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
-                        <Check className="w-3 h-3" />
-                        Aktif
-                      </span>
-                    </td>
-                  </tr>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2 text-[11px] pt-1 border-t border-slate-100">
+                      <div>
+                        <span className="text-[9px] uppercase font-bold text-slate-400 block">Halaqah:</span>
+                        <span className="text-slate-700 font-medium truncate block">{s.halaqah || 'Umum'}</span>
+                      </div>
+                      <div>
+                        <span className="text-[9px] uppercase font-bold text-slate-400 block">Target Kurikulum:</span>
+                        <span className="text-emerald-800 font-bold truncate block">{s.targetJuz || 'Juz 30'}</span>
+                      </div>
+                    </div>
+                  </div>
                 ))}
-              </tbody>
-            </table>
-          </div>
+              </div>
+            </>
+          )}
         </div>
       )}
 
       {/* TAB 2: DATA PENGAJAR */}
       {subTab === 'pengajar' && (
-        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-          <div className="p-4 bg-emerald-50/60 border-b border-emerald-100 text-xs text-emerald-900 flex items-center justify-between">
+        <div className="space-y-4">
+          <div className="p-3.5 bg-emerald-50/80 rounded-2xl border border-emerald-200 text-xs text-emerald-950 flex items-center justify-between">
             <p>
-              💡 <strong>Data Pengajar:</strong> Menampung guru / asatidz KBM dan pengajar tahfidz (di luar musyrif internal asrama).
+              💡 <strong>Data Asatidz KBM:</strong> Daftar pengajar mata pelajaran dan asatidz pembimbing Ma'had Ibnu Abbas.
             </p>
           </div>
-          <div className="overflow-x-auto">
-            <table className="w-full text-xs text-left border-collapse">
-              <thead className="bg-slate-50 text-slate-700 uppercase font-bold border-b border-slate-200">
-                <tr>
-                  <th className="px-4 py-3 text-center w-12">No</th>
-                  <th className="px-4 py-3">Nama Lengkap & Gelar</th>
-                  <th className="px-4 py-3">Panggilan</th>
-                  <th className="px-4 py-3">Mata Pelajaran</th>
-                  <th className="px-4 py-3">Gender / Kampus</th>
-                  <th className="px-4 py-3">Marhalah</th>
-                  <th className="px-4 py-3 text-center">Status</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
+
+          {filteredPengajar.length === 0 ? (
+            <div className="bg-white rounded-3xl p-10 text-center border border-slate-200/90 text-slate-400">
+              <Briefcase className="w-10 h-10 mx-auto mb-2 opacity-30 text-emerald-600" />
+              <p className="font-bold text-sm text-slate-700">Data pengajar tidak ditemukan</p>
+            </div>
+          ) : (
+            <>
+              {/* Desktop Table */}
+              <div className="hidden md:block bg-white rounded-3xl shadow-sm border border-slate-200/90 overflow-hidden">
+                <table className="w-full text-xs text-left border-collapse">
+                  <thead className="bg-slate-50 text-slate-700 uppercase font-black border-b border-slate-200">
+                    <tr>
+                      <th className="px-4 py-3.5 text-center w-12">No</th>
+                      <th className="px-4 py-3.5">Nama Lengkap & Gelar</th>
+                      <th className="px-4 py-3.5">Panggilan</th>
+                      <th className="px-4 py-3.5">Mata Pelajaran</th>
+                      <th className="px-4 py-3.5">Kampus & Gender</th>
+                      <th className="px-4 py-3.5">Marhalah</th>
+                      <th className="px-4 py-3.5 text-center">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {filteredPengajar.map((p, idx) => (
+                      <tr key={p.id} className="hover:bg-slate-50 transition">
+                        <td className="px-4 py-3 text-center font-bold text-slate-400">{idx + 1}</td>
+                        <td className="px-4 py-3 font-bold text-slate-900">{p.nama}</td>
+                        <td className="px-4 py-3 text-slate-600">{p.panggilan || '-'}</td>
+                        <td className="px-4 py-3 font-bold text-emerald-800">{p.mapel}</td>
+                        <td className="px-4 py-3">
+                          <span className={`px-2.5 py-0.5 rounded text-[10px] font-bold ${
+                            p.kampus === 'BANIN' ? 'bg-blue-100 text-blue-800' : 'bg-pink-100 text-pink-800'
+                          }`}>
+                            {p.kampus === 'BANIN' ? 'Putra (Banin)' : 'Putri (Banat)'}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-slate-600">{p.marhalah}</td>
+                        <td className="px-4 py-3 text-center">
+                          <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+                            <Check className="w-3 h-3" />
+                            Aktif
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Mobile Cards */}
+              <div className="md:hidden space-y-2.5">
                 {filteredPengajar.map((p, idx) => (
-                  <tr key={p.id} className="hover:bg-slate-50 transition">
-                    <td className="px-4 py-3 text-center font-bold text-slate-400">{idx + 1}</td>
-                    <td className="px-4 py-3 font-bold text-slate-900">{p.nama}</td>
-                    <td className="px-4 py-3 text-slate-600">{p.panggilan || '-'}</td>
-                    <td className="px-4 py-3 font-semibold text-emerald-800">{p.mapel}</td>
-                    <td className="px-4 py-3">
+                  <div
+                    key={p.id}
+                    className="p-3.5 rounded-2xl bg-white border border-slate-200 shadow-2xs space-y-2"
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <div>
+                        <h4 className="font-black text-xs text-slate-900">{p.nama}</h4>
+                        <span className="text-[10px] text-slate-500">Panggilan: {p.panggilan || '-'}</span>
+                      </div>
                       <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                        p.kampus === 'BANIN' ? 'bg-blue-100 text-blue-800' : 'bg-pink-100 text-pink-800'
+                        p.kampus === 'BANIN' ? 'bg-blue-50 text-blue-800 border border-blue-200' : 'bg-pink-50 text-pink-800 border border-pink-200'
                       }`}>
-                        {p.kampus === 'BANIN' ? 'Putra (Banin)' : 'Putri (Banat)'}
+                        {p.kampus === 'BANIN' ? 'Banin' : 'Banat'}
                       </span>
-                    </td>
-                    <td className="px-4 py-3 text-slate-600">{p.marhalah}</td>
-                    <td className="px-4 py-3 text-center">
-                      <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
-                        <Check className="w-3 h-3" />
-                        Aktif
-                      </span>
-                    </td>
-                  </tr>
+                    </div>
+
+                    <div className="flex items-center justify-between text-[11px] pt-1 border-t border-slate-100">
+                      <span className="font-bold text-emerald-800">{p.mapel}</span>
+                      <span className="text-slate-500 font-medium">Unit: {p.marhalah}</span>
+                    </div>
+                  </div>
                 ))}
-              </tbody>
-            </table>
-          </div>
+              </div>
+            </>
+          )}
         </div>
       )}
 
-      {/* TAB 3: SETTING PENUGASAN PENGUJI UJIAN */}
+      {/* TAB 3: PENUGASAN PENGUJI UJIAN */}
       {subTab === 'penguji' && (
-        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden space-y-4">
-          <div className="p-4 bg-amber-50/80 border-b border-amber-200 text-xs text-amber-900">
-            <h4 className="font-extrabold text-sm mb-1 text-amber-950">
-              ⚖️ Pengaturan Tim Penguji Ujian Hafalan (UTS & UAS)
+        <div className="space-y-4">
+          <div className="p-3.5 bg-amber-50/80 rounded-2xl border border-amber-200 text-xs text-amber-950 space-y-1">
+            <h4 className="font-black text-xs text-amber-950 flex items-center gap-1.5">
+              <span>⚖️ Pengaturan Tim Penguji Resmi Ujian Tahfidz</span>
             </h4>
-            <p>
-              Centang pada kolom <strong>"Tugaskan Menguji"</strong> untuk menetapkan siapa saja dari para Musyrif dan Pengajar yang akan menjadi Penguji Resmi pada sesi ujian hafalan Al-Qur'an.
+            <p className="leading-relaxed">
+              Tentukan siapa saja asatidz yang aktif sebagai Penguji resmi. Penguji yang aktif akan otomatis muncul pada formulir input nilai ujian.
             </p>
           </div>
 
-          <div className="overflow-x-auto px-4 pb-4">
-            <table className="w-full text-xs text-left border-collapse">
-              <thead className="bg-slate-100 text-slate-700 uppercase font-bold border-b border-slate-200">
-                <tr>
-                  <th className="px-4 py-3 text-center w-12">No</th>
-                  <th className="px-4 py-3">Nama Asatidz</th>
-                  <th className="px-4 py-3 text-center">Asal Petugas</th>
-                  <th className="px-4 py-3">Penugasan Kampus</th>
-                  <th className="px-4 py-3 text-center">Tugaskan Menguji?</th>
-                  <th className="px-4 py-3 text-center">Keterangan</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
+          {filteredKandidat.length === 0 ? (
+            <div className="bg-white rounded-3xl p-10 text-center border border-slate-200/90 text-slate-400">
+              <ShieldCheck className="w-10 h-10 mx-auto mb-2 opacity-30 text-emerald-600" />
+              <p className="font-bold text-sm text-slate-700">Kandidat penguji tidak ditemukan</p>
+            </div>
+          ) : (
+            <>
+              {/* Desktop Table */}
+              <div className="hidden md:block bg-white rounded-3xl shadow-sm border border-slate-200/90 overflow-hidden">
+                <table className="w-full text-xs text-left border-collapse">
+                  <thead className="bg-slate-100 text-slate-700 uppercase font-black border-b border-slate-200">
+                    <tr>
+                      <th className="px-4 py-3.5 text-center w-12">No</th>
+                      <th className="px-4 py-3.5">Nama Asatidz</th>
+                      <th className="px-4 py-3.5 text-center">Asal Petugas</th>
+                      <th className="px-4 py-3.5">Kampus</th>
+                      <th className="px-4 py-3.5 text-center">Status & Aksi Penguji</th>
+                      <th className="px-4 py-3.5 text-center">Keterangan</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {filteredKandidat.map((k, idx) => (
+                      <tr key={k.id} className={`hover:bg-slate-50 transition ${k.isPengujiAktif ? 'bg-emerald-50/30' : ''}`}>
+                        <td className="px-4 py-3 text-center font-bold text-slate-400">{idx + 1}</td>
+                        <td className="px-4 py-3">
+                          <div className="font-extrabold text-slate-900">{k.nama}</div>
+                          <div className="text-[10px] text-slate-400">{k.panggilan ? `Panggilan: ${k.panggilan}` : ''}</div>
+                        </td>
+                        <td className="px-4 py-3 text-center">
+                          <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase ${
+                            k.tipeAsal === 'MUSYRIF'
+                              ? 'bg-purple-100 text-purple-800'
+                              : 'bg-indigo-100 text-indigo-800'
+                          }`}>
+                            {k.tipeAsal}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3">
+                          <span className={`px-2.5 py-0.5 rounded text-[10px] font-bold ${
+                            k.kampus === 'BANIN' ? 'bg-blue-50 text-blue-800 border border-blue-200' : 'bg-pink-50 text-pink-800 border border-pink-200'
+                          }`}>
+                            {k.kampus === 'BANIN' ? 'Kampus Banin (Putra)' : 'Kampus Banat (Putri)'}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-center">
+                          <button
+                            type="button"
+                            onClick={() => handleTogglePenguji(k)}
+                            className={`px-3.5 py-2 rounded-xl text-xs font-black transition-all flex items-center justify-center gap-1.5 mx-auto active:scale-95 btn-tactile ${
+                              k.isPengujiAktif
+                                ? 'bg-emerald-600 text-white shadow-xs hover:bg-emerald-700'
+                                : 'bg-slate-100 text-slate-600 hover:bg-slate-200 border border-slate-300'
+                            }`}
+                          >
+                            {k.isPengujiAktif ? (
+                              <>
+                                <CheckCircle2 className="w-3.5 h-3.5" />
+                                <span>Penguji Aktif</span>
+                              </>
+                            ) : (
+                              <>
+                                <XCircle className="w-3.5 h-3.5 text-slate-400" />
+                                <span>Bukan Penguji</span>
+                              </>
+                            )}
+                          </button>
+                        </td>
+                        <td className="px-4 py-3 text-center text-slate-500 text-[11px]">
+                          {k.keterangan || '-'}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Mobile Cards with Instant Toggle */}
+              <div className="md:hidden space-y-2.5">
                 {filteredKandidat.map((k, idx) => (
-                  <tr key={k.id} className={`hover:bg-slate-50 transition ${k.isPengujiAktif ? 'bg-emerald-50/30' : ''}`}>
-                    <td className="px-4 py-3 text-center font-bold text-slate-400">{idx + 1}</td>
-                    <td className="px-4 py-3">
-                      <div className="font-extrabold text-slate-900">{k.nama}</div>
-                      <div className="text-[10px] text-slate-400">{k.panggilan ? `Panggilan: ${k.panggilan}` : ''}</div>
-                    </td>
-                    <td className="px-4 py-3 text-center">
-                      <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase ${
-                        k.tipeAsal === 'MUSYRIF'
-                          ? 'bg-purple-100 text-purple-800'
-                          : 'bg-indigo-100 text-indigo-800'
-                      }`}>
-                        {k.tipeAsal}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3">
+                  <div
+                    key={k.id}
+                    className={`p-3.5 rounded-2xl border transition space-y-2.5 ${
+                      k.isPengujiAktif ? 'bg-emerald-50/40 border-emerald-300 shadow-2xs' : 'bg-white border-slate-200'
+                    }`}
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <div>
+                        <h4 className="font-black text-xs text-slate-900">{k.nama}</h4>
+                        <div className="flex items-center gap-2 mt-0.5">
+                          <span className={`px-2 py-0.2 rounded text-[9px] font-black uppercase ${
+                            k.tipeAsal === 'MUSYRIF' ? 'bg-purple-100 text-purple-800' : 'bg-indigo-100 text-indigo-800'
+                          }`}>
+                            {k.tipeAsal}
+                          </span>
+                          <span className="text-[10px] text-slate-500">{k.panggilan ? `(${k.panggilan})` : ''}</span>
+                        </div>
+                      </div>
+
                       <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
                         k.kampus === 'BANIN' ? 'bg-blue-50 text-blue-800 border border-blue-200' : 'bg-pink-50 text-pink-800 border border-pink-200'
                       }`}>
-                        {k.kampus === 'BANIN' ? 'Kampus Banin (Putra)' : 'Kampus Banat (Putri)'}
+                        {k.kampus === 'BANIN' ? 'Banin' : 'Banat'}
                       </span>
-                    </td>
-                    <td className="px-4 py-3 text-center">
+                    </div>
+
+                    <div className="pt-2 border-t border-slate-100 flex items-center justify-between">
+                      <span className="text-[10px] text-slate-500 font-medium">
+                        {k.isPengujiAktif ? 'Tercatat di daftar penguji' : 'Belum ditugaskan'}
+                      </span>
+
                       <button
                         type="button"
                         onClick={() => handleTogglePenguji(k)}
-                        className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all flex items-center justify-center gap-1.5 mx-auto ${
+                        className={`px-3 py-1.5 rounded-xl text-xs font-black transition flex items-center gap-1.5 active:scale-95 btn-tactile ${
                           k.isPengujiAktif
                             ? 'bg-emerald-600 text-white shadow-xs hover:bg-emerald-700'
-                            : 'bg-slate-100 text-slate-500 hover:bg-slate-200 border border-slate-300'
+                            : 'bg-slate-100 text-slate-600 hover:bg-slate-200 border border-slate-300'
                         }`}
                       >
                         {k.isPengujiAktif ? (
@@ -473,31 +735,42 @@ export const MasterDataView: React.FC<MasterDataViewProps> = ({
                           </>
                         ) : (
                           <>
-                            <XCircle className="w-3.5 h-3.5 text-slate-400" />
-                            <span>Bukan Penguji</span>
+                            <Plus className="w-3.5 h-3.5 text-slate-400" />
+                            <span>Tugaskan</span>
                           </>
                         )}
                       </button>
-                    </td>
-                    <td className="px-4 py-3 text-center text-slate-500 text-[11px]">
-                      {k.keterangan || '-'}
-                    </td>
-                  </tr>
+                    </div>
+                  </div>
                 ))}
-              </tbody>
-            </table>
-          </div>
+              </div>
+            </>
+          )}
         </div>
       )}
 
       {/* MODAL TAMBAH SANTRI */}
       {showAddSantriModal && (
-        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <form onSubmit={handleTambahSantri} className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4">
-            <h3 className="text-base font-black text-slate-900">Tambah Santri Baru</h3>
-            <p className="text-xs text-slate-500">
-              Unit: {marhalah === 'MI' ? 'Madrasah Ibtidaiyah' : 'Ula / MTs'} ({kampus === 'BANIN' ? 'Putra' : 'Putri'})
-            </p>
+        <div className="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 animate-fade-up">
+          <form
+            onSubmit={handleTambahSantri}
+            className="bg-white rounded-3xl max-w-md w-full p-5 sm:p-6 shadow-2xl space-y-4 max-h-[90dvh] overflow-y-auto"
+          >
+            <div className="flex items-center justify-between border-b pb-3">
+              <div>
+                <h3 className="text-base font-black text-slate-900">Tambah Santri Baru</h3>
+                <p className="text-xs text-slate-500">
+                  Unit: {marhalah === 'MI' ? 'MI' : 'Ula / MTs'} ({kampus === 'BANIN' ? 'Banin' : 'Banat'})
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowAddSantriModal(false)}
+                className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 flex items-center justify-center font-bold"
+              >
+                ✕
+              </button>
+            </div>
 
             <div className="space-y-3 text-xs">
               <div>
@@ -508,7 +781,7 @@ export const MasterDataView: React.FC<MasterDataViewProps> = ({
                   value={namaSantri}
                   onChange={(e) => setNamaSantri(e.target.value)}
                   placeholder="Contoh: Muhammad Abdullah"
-                  className="w-full px-3 py-2 border rounded-xl focus:ring-2 focus:ring-emerald-500 focus:outline-none"
+                  className="w-full px-3.5 py-2.5 border rounded-xl focus:ring-2 focus:ring-emerald-500 focus:outline-none"
                 />
               </div>
 
@@ -519,7 +792,7 @@ export const MasterDataView: React.FC<MasterDataViewProps> = ({
                   value={nisnSantri}
                   onChange={(e) => setNisnSantri(e.target.value)}
                   placeholder="Contoh: 0081234567"
-                  className="w-full px-3 py-2 border rounded-xl focus:ring-2 focus:ring-emerald-500 focus:outline-none"
+                  className="w-full px-3.5 py-2.5 border rounded-xl focus:ring-2 focus:ring-emerald-500 focus:outline-none font-mono"
                 />
               </div>
 
@@ -530,7 +803,7 @@ export const MasterDataView: React.FC<MasterDataViewProps> = ({
                   required
                   value={kelasSantri}
                   onChange={(e) => setKelasSantri(e.target.value)}
-                  className="w-full px-3 py-2 border rounded-xl focus:ring-2 focus:ring-emerald-500 focus:outline-none"
+                  className="w-full px-3.5 py-2.5 border rounded-xl focus:ring-2 focus:ring-emerald-500 focus:outline-none"
                 />
               </div>
 
@@ -541,7 +814,7 @@ export const MasterDataView: React.FC<MasterDataViewProps> = ({
                   value={halaqahSantri}
                   onChange={(e) => setHalaqahSantri(e.target.value)}
                   placeholder="Contoh: Halaqah Abu Bakar"
-                  className="w-full px-3 py-2 border rounded-xl focus:ring-2 focus:ring-emerald-500 focus:outline-none"
+                  className="w-full px-3.5 py-2.5 border rounded-xl focus:ring-2 focus:ring-emerald-500 focus:outline-none"
                 />
               </div>
 
@@ -552,23 +825,23 @@ export const MasterDataView: React.FC<MasterDataViewProps> = ({
                   value={targetJuzSantri}
                   onChange={(e) => setTargetJuzSantri(e.target.value)}
                   placeholder="Contoh: Juz 30, Juz 29"
-                  className="w-full px-3 py-2 border rounded-xl focus:ring-2 focus:ring-emerald-500 focus:outline-none"
+                  className="w-full px-3.5 py-2.5 border rounded-xl focus:ring-2 focus:ring-emerald-500 focus:outline-none"
                 />
               </div>
             </div>
 
-            <div className="flex items-center justify-end gap-2 pt-2 border-t">
+            <div className="flex items-center justify-end gap-2 pt-3 border-t">
               <button
                 type="button"
                 onClick={() => setShowAddSantriModal(false)}
-                className="px-4 py-2 bg-slate-100 text-slate-700 rounded-xl text-xs font-bold hover:bg-slate-200"
+                className="px-4 py-2.5 bg-slate-100 text-slate-700 rounded-xl text-xs font-bold hover:bg-slate-200"
               >
                 Batal
               </button>
               <button
                 type="submit"
                 disabled={isSubmitting}
-                className="px-4 py-2 bg-emerald-600 text-white rounded-xl text-xs font-bold hover:bg-emerald-700 disabled:opacity-50"
+                className="px-5 py-2.5 bg-emerald-600 text-white rounded-xl text-xs font-black hover:bg-emerald-700 disabled:opacity-50 shadow-xs btn-tactile"
               >
                 {isSubmitting ? 'Menyimpan...' : 'Simpan Santri'}
               </button>
@@ -579,12 +852,26 @@ export const MasterDataView: React.FC<MasterDataViewProps> = ({
 
       {/* MODAL TAMBAH PENGAJAR */}
       {showAddPengajarModal && (
-        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <form onSubmit={handleTambahPengajar} className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4">
-            <h3 className="text-base font-black text-slate-900">Tambah Data Pengajar Baru</h3>
-            <p className="text-xs text-slate-500">
-              Tambahkan guru / asatidz KBM Ma'had Ibnu Abbas.
-            </p>
+        <div className="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 animate-fade-up">
+          <form
+            onSubmit={handleTambahPengajar}
+            className="bg-white rounded-3xl max-w-md w-full p-5 sm:p-6 shadow-2xl space-y-4 max-h-[90dvh] overflow-y-auto"
+          >
+            <div className="flex items-center justify-between border-b pb-3">
+              <div>
+                <h3 className="text-base font-black text-slate-900">Tambah Data Pengajar Baru</h3>
+                <p className="text-xs text-slate-500">
+                  Tambahkan guru / asatidz KBM Ma'had Ibnu Abbas.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowAddPengajarModal(false)}
+                className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 flex items-center justify-center font-bold"
+              >
+                ✕
+              </button>
+            </div>
 
             <div className="space-y-3 text-xs">
               <div>
@@ -595,7 +882,7 @@ export const MasterDataView: React.FC<MasterDataViewProps> = ({
                   value={namaPengajar}
                   onChange={(e) => setNamaPengajar(e.target.value)}
                   placeholder="Contoh: Ust. Syahrul Ramadhan, Lc."
-                  className="w-full px-3 py-2 border rounded-xl focus:ring-2 focus:ring-emerald-500 focus:outline-none"
+                  className="w-full px-3.5 py-2.5 border rounded-xl focus:ring-2 focus:ring-emerald-500 focus:outline-none"
                 />
               </div>
 
@@ -606,7 +893,7 @@ export const MasterDataView: React.FC<MasterDataViewProps> = ({
                   value={panggilanPengajar}
                   onChange={(e) => setPanggilanPengajar(e.target.value)}
                   placeholder="Contoh: Syahrul"
-                  className="w-full px-3 py-2 border rounded-xl focus:ring-2 focus:ring-emerald-500 focus:outline-none"
+                  className="w-full px-3.5 py-2.5 border rounded-xl focus:ring-2 focus:ring-emerald-500 focus:outline-none"
                 />
               </div>
 
@@ -618,7 +905,7 @@ export const MasterDataView: React.FC<MasterDataViewProps> = ({
                   value={mapelPengajar}
                   onChange={(e) => setMapelPengajar(e.target.value)}
                   placeholder="Contoh: Tahfidz Al-Qur'an / Fiqih"
-                  className="w-full px-3 py-2 border rounded-xl focus:ring-2 focus:ring-emerald-500 focus:outline-none"
+                  className="w-full px-3.5 py-2.5 border rounded-xl focus:ring-2 focus:ring-emerald-500 focus:outline-none"
                 />
               </div>
 
@@ -632,7 +919,7 @@ export const MasterDataView: React.FC<MasterDataViewProps> = ({
                       setKampusPengajar(val);
                       setGenderPengajar(val === 'BANAT' ? 'AKHWAT' : 'IKHWAN');
                     }}
-                    className="w-full px-3 py-2 border rounded-xl focus:ring-2 focus:ring-emerald-500 focus:outline-none"
+                    className="w-full px-3 py-2.5 border rounded-xl focus:ring-2 focus:ring-emerald-500 focus:outline-none font-bold"
                   >
                     <option value="BANIN">Kampus Banin (Putra)</option>
                     <option value="BANAT">Kampus Banat (Putri)</option>
@@ -644,7 +931,7 @@ export const MasterDataView: React.FC<MasterDataViewProps> = ({
                   <select
                     value={genderPengajar}
                     onChange={(e) => setGenderPengajar(e.target.value as any)}
-                    className="w-full px-3 py-2 border rounded-xl focus:ring-2 focus:ring-emerald-500 focus:outline-none"
+                    className="w-full px-3 py-2.5 border rounded-xl focus:ring-2 focus:ring-emerald-500 focus:outline-none font-bold"
                   >
                     <option value="IKHWAN">Ikhwan (Laki-laki)</option>
                     <option value="AKHWAT">Akhwat (Perempuan)</option>
@@ -653,18 +940,18 @@ export const MasterDataView: React.FC<MasterDataViewProps> = ({
               </div>
             </div>
 
-            <div className="flex items-center justify-end gap-2 pt-2 border-t">
+            <div className="flex items-center justify-end gap-2 pt-3 border-t">
               <button
                 type="button"
                 onClick={() => setShowAddPengajarModal(false)}
-                className="px-4 py-2 bg-slate-100 text-slate-700 rounded-xl text-xs font-bold hover:bg-slate-200"
+                className="px-4 py-2.5 bg-slate-100 text-slate-700 rounded-xl text-xs font-bold hover:bg-slate-200"
               >
                 Batal
               </button>
               <button
                 type="submit"
                 disabled={isSubmitting}
-                className="px-4 py-2 bg-emerald-600 text-white rounded-xl text-xs font-bold hover:bg-emerald-700 disabled:opacity-50"
+                className="px-5 py-2.5 bg-emerald-600 text-white rounded-xl text-xs font-black hover:bg-emerald-700 disabled:opacity-50 shadow-xs btn-tactile"
               >
                 {isSubmitting ? 'Menyimpan...' : 'Simpan Pengajar'}
               </button>
@@ -673,38 +960,109 @@ export const MasterDataView: React.FC<MasterDataViewProps> = ({
         </div>
       )}
 
-      {/* MODAL IMPORT EXCEL */}
+      {/* MODAL IMPORT EXCEL / CSV */}
       {showImportModal && (
-        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4">
-            <h3 className="text-base font-black text-slate-900">Import Data Santri dari Excel (.xlsx / .csv)</h3>
-            <p className="text-xs text-slate-500">
-              Unggah file Excel daftar santri untuk unit {marhalah === 'MI' ? 'MI' : 'Ula/MTs'} {kampus === 'BANIN' ? 'Banin' : 'Banat'}.
-            </p>
-
-            <div className="border-2 border-dashed border-slate-300 rounded-xl p-8 text-center bg-slate-50 hover:bg-emerald-50/50 hover:border-emerald-300 transition cursor-pointer">
-              <Upload className="w-8 h-8 text-emerald-600 mx-auto mb-2 opacity-80" />
-              <p className="text-xs font-bold text-slate-700">Tarik file Excel ke sini atau klik untuk browse</p>
-              <p className="text-[10px] text-slate-400 mt-1">Mendukung file .xlsx, .xls, .csv</p>
-            </div>
-
-            <div className="flex items-center justify-end gap-2 pt-2">
+        <div className="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 animate-fade-up">
+          <div className="bg-white rounded-3xl max-w-lg w-full p-5 sm:p-6 shadow-2xl space-y-4 max-h-[90dvh] overflow-y-auto">
+            <div className="flex items-center justify-between border-b pb-3">
+              <div>
+                <h3 className="text-base font-black text-slate-900">Import Data Santri dari File CSV</h3>
+                <p className="text-xs text-slate-500">
+                  Unit: {marhalah === 'MI' ? 'MI' : 'Ula/MTs'} {kampus === 'BANIN' ? 'Banin' : 'Banat'}
+                </p>
+              </div>
               <button
                 type="button"
-                onClick={() => setShowImportModal(false)}
-                className="px-4 py-2 bg-slate-100 text-slate-700 rounded-xl text-xs font-bold hover:bg-slate-200"
+                onClick={() => {
+                  setShowImportModal(false);
+                  setImportedRows([]);
+                }}
+                className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 flex items-center justify-center font-bold"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Template Download Button */}
+            <div className="flex items-center justify-between bg-emerald-50/70 p-3 rounded-2xl border border-emerald-200 text-xs">
+              <div className="flex items-center gap-2">
+                <FileSpreadsheet className="w-4 h-4 text-emerald-700 shrink-0" />
+                <span className="font-bold text-emerald-950">Belum punya format CSV?</span>
+              </div>
+              <button
+                type="button"
+                onClick={handleDownloadTemplate}
+                className="px-3 py-1 bg-white hover:bg-emerald-100 text-emerald-800 rounded-xl font-black text-[11px] border border-emerald-300 transition flex items-center gap-1 btn-tactile"
+              >
+                <Download className="w-3 h-3" />
+                <span>Unduh Template</span>
+              </button>
+            </div>
+
+            {/* Drag & Drop / File Input */}
+            <input
+              type="file"
+              ref={fileInputRef}
+              onChange={handleFileUpload}
+              accept=".csv"
+              className="hidden"
+            />
+
+            <div 
+              onClick={() => fileInputRef.current?.click()}
+              className="border-2 border-dashed border-slate-300 hover:border-emerald-500 rounded-2xl p-6 text-center bg-slate-50/60 hover:bg-emerald-50/30 transition cursor-pointer"
+            >
+              <Upload className="w-8 h-8 text-emerald-600 mx-auto mb-2 opacity-80" />
+              <p className="text-xs font-bold text-slate-800">Klik untuk memilih file .csv dari perangkat</p>
+              <p className="text-[10px] text-slate-400 mt-1">Mendukung format Comma Separated Values (UTF-8)</p>
+            </div>
+
+            {/* Preview of Imported Rows */}
+            {importedRows.length > 0 && (
+              <div className="space-y-2">
+                <div className="flex items-center justify-between text-xs font-bold">
+                  <span className="text-emerald-800">Preview: {importedRows.length} Data Santri Siap Diimport</span>
+                  <button 
+                    onClick={() => setImportedRows([])} 
+                    className="text-slate-400 hover:text-red-600 text-[10px]"
+                  >
+                    Batal Pilih
+                  </button>
+                </div>
+                <div className="max-h-36 overflow-y-auto border border-slate-200 rounded-xl p-2 bg-slate-50 text-[11px] divide-y divide-slate-200">
+                  {importedRows.slice(0, 10).map((r, i) => (
+                    <div key={i} className="py-1 flex items-center justify-between">
+                      <span className="font-bold text-slate-800">{r.nama}</span>
+                      <span className="text-slate-500">{r.kelas} • {r.targetJuz}</span>
+                    </div>
+                  ))}
+                  {importedRows.length > 10 && (
+                    <div className="py-1 text-center text-slate-400 text-[10px]">
+                      ...dan {importedRows.length - 10} santri lainnya
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            <div className="flex items-center justify-end gap-2 pt-2 border-t">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowImportModal(false);
+                  setImportedRows([]);
+                }}
+                className="px-4 py-2.5 bg-slate-100 text-slate-700 rounded-xl text-xs font-bold hover:bg-slate-200"
               >
                 Batal
               </button>
               <button
                 type="button"
-                onClick={() => {
-                  alert('Data santri berhasil diimport ke Neon!');
-                  setShowImportModal(false);
-                }}
-                className="px-4 py-2 bg-emerald-600 text-white rounded-xl text-xs font-bold hover:bg-emerald-700"
+                onClick={handleCommitImport}
+                disabled={importedRows.length === 0 || isSubmitting}
+                className="px-5 py-2.5 bg-emerald-600 text-white rounded-xl text-xs font-black hover:bg-emerald-700 disabled:opacity-50 shadow-sm btn-tactile"
               >
-                Mulai Import
+                {isSubmitting ? 'Mengimport...' : `Simpan ${importedRows.length} Santri`}
               </button>
             </div>
           </div>

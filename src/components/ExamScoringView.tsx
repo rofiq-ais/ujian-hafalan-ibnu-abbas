@@ -13,9 +13,16 @@ import {
   Info,
   Calendar,
   Layers,
-  Award
+  Award,
+  Search,
+  Check,
+  Star,
+  Clock,
+  Edit3,
+  HelpCircle,
+  TrendingUp,
+  User
 } from 'lucide-react';
-
 import { PengujiItem } from '../services/api';
 
 interface ExamScoringViewProps {
@@ -34,7 +41,7 @@ export const ExamScoringView: React.FC<ExamScoringViewProps> = ({
   kampus,
   santriList,
   penilaianList,
-  activePengujiNama = 'Ust. Ahmad Fauzi',
+  activePengujiNama = 'Ust. Ahmad Fauzi, Lc.',
   pengujiList = [],
   onSavePenilaian,
   onViewRapor,
@@ -46,6 +53,7 @@ export const ExamScoringView: React.FC<ExamScoringViewProps> = ({
 
   // Form setup states
   const [selectedSantriId, setSelectedSantriId] = useState<string>('');
+  const [santriSearch, setSantriSearch] = useState<string>('');
   const [selectedPenguji, setSelectedPenguji] = useState<string>(activePengujiNama);
   const [jenisUjian, setJenisUjian] = useState<JenisUjian>('UAS');
   const [selectedJuz, setSelectedJuz] = useState<string[]>(['Juz 30', 'Juz 29']);
@@ -57,7 +65,7 @@ export const ExamScoringView: React.FC<ExamScoringViewProps> = ({
     }
   }, [activePengujiNama]);
 
-  // Wizard state: 0 = setup, 1..totalSoal = scoring soal, totalSoal+1 = finish
+  // Wizard state: 0 = setup, 1..totalSoal = scoring soal, totalSoal+1 = finish review
   const [currentStep, setCurrentStep] = useState<number>(0);
   const [toastMessage, setToastMessage] = useState<{ title: string; desc: string; type: 'success' | 'info' | 'warning' } | null>(null);
 
@@ -76,31 +84,41 @@ export const ExamScoringView: React.FC<ExamScoringViewProps> = ({
     }
   }, [filteredSantri, selectedSantriId]);
 
+  // Filtered santri options based on search
+  const searchedSantriList = useMemo(() => {
+    if (!santriSearch.trim()) return filteredSantri;
+    const q = santriSearch.toLowerCase();
+    return filteredSantri.filter(s => 
+      s.nama.toLowerCase().includes(q) || 
+      s.nisn.includes(q) || 
+      s.kelas.toLowerCase().includes(q)
+    );
+  }, [filteredSantri, santriSearch]);
+
+  // Check if current santri already has a saved record
+  const existingRecord = useMemo(() => {
+    if (!selectedSantriId) return null;
+    return penilaianList.find(
+      p => p.santriId === selectedSantriId && p.jenisUjian === jenisUjian
+    ) || null;
+  }, [penilaianList, selectedSantriId, jenisUjian]);
+
   // When santri or exam type changes, check if there's an existing draft/record
   useEffect(() => {
     if (!selectedSantriId) return;
-
-    const existingRecord = penilaianList.find(
-      p => p.santriId === selectedSantriId && p.jenisUjian === jenisUjian
-    );
 
     if (existingRecord) {
       if (existingRecord.jenisUjian === 'UAS' && existingRecord.selectedJuzList.length > 0) {
         setSelectedJuz(existingRecord.selectedJuzList);
       }
       setSoalList(existingRecord.soal);
-      setToastMessage({
-        title: 'Data Cicilan Dimuat',
-        desc: `Ditemukan data tersimpan untuk ${existingRecord.namaSantri} (${existingRecord.status === 'DRAFT' ? 'Status: Draft Cicilan' : 'Status: Selesai'}).`,
-        type: 'info'
-      });
     } else {
       initNewQuestions();
     }
-  }, [selectedSantriId, jenisUjian]);
+  }, [selectedSantriId, jenisUjian, existingRecord]);
 
   const initNewQuestions = () => {
-    const total = jenisUjian === 'UAS' ? selectedJuz.length * 5 : 10;
+    const total = jenisUjian === 'UAS' ? Math.max(5, selectedJuz.length * 5) : 10;
     const initial: SoalDetail[] = [];
 
     for (let i = 1; i <= total; i++) {
@@ -126,12 +144,20 @@ export const ExamScoringView: React.FC<ExamScoringViewProps> = ({
 
   const handleJuzToggle = (juz: string) => {
     if (selectedJuz.includes(juz)) {
+      if (selectedJuz.length === 1) {
+        setToastMessage({
+          title: 'Minimal 1 Juz',
+          desc: 'Ujian UAS membutuhkan minimal 1 Juz hafalan.',
+          type: 'warning'
+        });
+        return;
+      }
       setSelectedJuz(selectedJuz.filter(j => j !== juz));
     } else {
       if (selectedJuz.length >= 10) {
         setToastMessage({
-          title: 'Batas Maksimal Tercapai',
-          desc: 'Maksimal hanya dapat memilih 10 Juz dalam sekali ujian.',
+          title: 'Batas Maksimal',
+          desc: 'Maksimal 10 Juz dalam satu siklus ujian (maksimal 50 butir soal).',
           type: 'warning'
         });
         return;
@@ -140,9 +166,17 @@ export const ExamScoringView: React.FC<ExamScoringViewProps> = ({
     }
   };
 
+  // Quick preset shortcuts for Juz
+  const handleJuzPreset = (type: 'juz30' | 'juz29_30' | 'juz28_30' | 'juz1_3') => {
+    if (type === 'juz30') setSelectedJuz(['Juz 30']);
+    else if (type === 'juz29_30') setSelectedJuz(['Juz 30', 'Juz 29']);
+    else if (type === 'juz28_30') setSelectedJuz(['Juz 30', 'Juz 29', 'Juz 28']);
+    else if (type === 'juz1_3') setSelectedJuz(['Juz 1', 'Juz 2', 'Juz 3']);
+  };
+
   const handleStartExam = () => {
     if (!currentSantri) {
-      setToastMessage({ title: 'Pilih Santri', desc: 'Silakan pilih nama santri terlebih dahulu.', type: 'warning' });
+      setToastMessage({ title: 'Pilih Santri', desc: 'Silakan pilih santri yang akan diuji terlebih dahulu.', type: 'warning' });
       return;
     }
     if (jenisUjian === 'UAS' && selectedJuz.length === 0) {
@@ -150,7 +184,6 @@ export const ExamScoringView: React.FC<ExamScoringViewProps> = ({
       return;
     }
 
-    // Ensure questions match current config
     const targetTotal = jenisUjian === 'UAS' ? selectedJuz.length * 5 : 10;
     if (soalList.length !== targetTotal) {
       initNewQuestions();
@@ -184,6 +217,37 @@ export const ExamScoringView: React.FC<ExamScoringViewProps> = ({
     });
   };
 
+  // Set direct preset score for current question
+  const setQuickScorePreset = (index: number, type: 'mumtaz' | 'lancar_baik' | 'reset') => {
+    setSoalList(prev => {
+      const next = [...prev];
+      const cur = { ...next[index] };
+
+      if (type === 'mumtaz') {
+        cur.sb = 0;
+        cur.sk = 0;
+        cur.tahsin = 6;
+      } else if (type === 'lancar_baik') {
+        cur.sb = 0;
+        cur.sk = 1;
+        cur.tahsin = 2;
+      } else if (type === 'reset') {
+        cur.sb = 0;
+        cur.sk = 0;
+        cur.tahsin = 2;
+      }
+
+      const calc = hitungNilaiAkhirSoal(cur.sb, cur.sk, cur.tahsin);
+      cur.kbe = calc.kbe;
+      cur.nilaiDasar = calc.nilaiDasar;
+      cur.bonusTahsin = calc.bonusTahsin;
+      cur.nilaiAkhirSoal = calc.nilaiAkhirSoal;
+
+      next[index] = cur;
+      return next;
+    });
+  };
+
   const totalQuestions = jenisUjian === 'UAS' ? selectedJuz.length * 5 : 10;
   const currentSoalIndex = currentStep - 1;
   const currentSoal = soalList[currentSoalIndex];
@@ -194,7 +258,7 @@ export const ExamScoringView: React.FC<ExamScoringViewProps> = ({
 
     const agregat = hitungAgregatUjian(soalList, jenisUjian === 'UAS', selectedJuz);
     const record: PenilaianRecord = {
-      id: `eval-${Date.now()}`,
+      id: existingRecord?.id || `eval-${Date.now()}`,
       santriId: currentSantri.id,
       namaSantri: currentSantri.nama,
       nisn: currentSantri.nisn,
@@ -219,7 +283,7 @@ export const ExamScoringView: React.FC<ExamScoringViewProps> = ({
     onSavePenilaian(record);
     setToastMessage({
       title: 'Progress Cicilan Tersimpan!',
-      desc: `Nilai hingga Soal ${currentStep} (${currentSoal?.juzLabel || 'UTS'}) berhasil disimpan. Anda dapat melanjutkan kapan saja.`,
+      desc: `Nilai hingga Soal ${currentStep} (${currentSoal?.juzLabel || 'UTS'}) aman tersimpan. Anda atau asatidz lain dapat melanjutkan kapan saja.`,
       type: 'success'
     });
   };
@@ -230,7 +294,7 @@ export const ExamScoringView: React.FC<ExamScoringViewProps> = ({
 
     const agregat = hitungAgregatUjian(soalList, jenisUjian === 'UAS', selectedJuz);
     const record: PenilaianRecord = {
-      id: `eval-${Date.now()}`,
+      id: existingRecord?.id || `eval-${Date.now()}`,
       santriId: currentSantri.id,
       namaSantri: currentSantri.nama,
       nisn: currentSantri.nisn,
@@ -269,11 +333,14 @@ export const ExamScoringView: React.FC<ExamScoringViewProps> = ({
     }
   }, [toastMessage]);
 
+  // Current question progress %
+  const progressPercent = totalQuestions > 0 ? Math.round((currentStep / totalQuestions) * 100) : 0;
+
   return (
-    <div className="max-w-4xl mx-auto p-4 sm:p-6 space-y-6">
+    <div className="max-w-4xl mx-auto p-3 sm:p-6 space-y-6">
       {/* Toast Notification */}
       {toastMessage && (
-        <div className={`p-4 rounded-xl shadow-lg border flex items-start gap-3 transition-all animate-in slide-in-from-top-2 ${
+        <div className={`p-4 rounded-2xl shadow-lg border flex items-start gap-3 transition-all animate-in slide-in-from-top-2 z-20 ${
           toastMessage.type === 'success'
             ? 'bg-emerald-50 border-emerald-300 text-emerald-900'
             : toastMessage.type === 'warning'
@@ -289,47 +356,95 @@ export const ExamScoringView: React.FC<ExamScoringViewProps> = ({
           )}
           <div className="flex-1 text-xs">
             <p className="font-extrabold text-sm">{toastMessage.title}</p>
-            <p className="mt-0.5 opacity-90">{toastMessage.desc}</p>
+            <p className="mt-0.5 opacity-90 leading-relaxed">{toastMessage.desc}</p>
           </div>
           <button
             onClick={() => setToastMessage(null)}
-            className="text-xs font-bold px-2 py-1 rounded-md hover:bg-black/5"
+            className="text-xs font-bold px-2 py-1 rounded-md hover:bg-black/5 active:scale-95"
+            aria-label="Tutup notifikasi"
           >
             ✕
           </button>
         </div>
       )}
 
-      {/* STEP 0: PENGATURAN AWAL & PILIH SANTRI */}
+      {/* STEP INDICATOR BREADCRUMB */}
+      <div className="bg-white rounded-2xl p-3 sm:p-4 border border-slate-200/80 shadow-2xs flex items-center justify-between gap-2 overflow-x-auto">
+        <div className="flex items-center gap-2 sm:gap-3">
+          <div className={`w-7 h-7 rounded-xl flex items-center justify-center font-black text-xs transition-all ${
+            currentStep === 0 ? 'bg-emerald-600 text-white shadow-xs' : 'bg-emerald-100 text-emerald-800'
+          }`}>
+            1
+          </div>
+          <span className={`text-xs font-bold ${currentStep === 0 ? 'text-slate-900' : 'text-slate-500'}`}>
+            Persiapan Ujian
+          </span>
+        </div>
+
+        <div className="w-6 sm:w-12 h-0.5 bg-slate-200"></div>
+
+        <div className="flex items-center gap-2 sm:gap-3">
+          <div className={`w-7 h-7 rounded-xl flex items-center justify-center font-black text-xs transition-all ${
+            currentStep >= 1 && currentStep <= totalQuestions
+              ? 'bg-emerald-600 text-white shadow-xs'
+              : currentStep > totalQuestions
+              ? 'bg-emerald-100 text-emerald-800'
+              : 'bg-slate-100 text-slate-400'
+          }`}>
+            2
+          </div>
+          <span className={`text-xs font-bold ${
+            currentStep >= 1 && currentStep <= totalQuestions ? 'text-slate-900' : 'text-slate-500'
+          }`}>
+            Penilaian Soal
+          </span>
+        </div>
+
+        <div className="w-6 sm:w-12 h-0.5 bg-slate-200"></div>
+
+        <div className="flex items-center gap-2 sm:gap-3">
+          <div className={`w-7 h-7 rounded-xl flex items-center justify-center font-black text-xs transition-all ${
+            currentStep > totalQuestions ? 'bg-emerald-600 text-white shadow-xs' : 'bg-slate-100 text-slate-400'
+          }`}>
+            3
+          </div>
+          <span className={`text-xs font-bold ${currentStep > totalQuestions ? 'text-slate-900' : 'text-slate-500'}`}>
+            Review & Simpan
+          </span>
+        </div>
+      </div>
+
+      {/* STEP 0: PERSIAPAN & PILIH SANTRI */}
       {currentStep === 0 && (
-        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-          <div className="p-5 sm:p-6 border-b border-slate-100 bg-gradient-to-r from-emerald-50/60 to-white">
-            <div className="flex items-center justify-between">
+        <div className="bg-white rounded-3xl shadow-sm border border-slate-200/90 overflow-hidden">
+          {/* Header */}
+          <div className="p-5 sm:p-6 border-b border-slate-100 bg-gradient-to-r from-emerald-50/70 via-teal-50/30 to-white">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div>
-                <span className="text-[11px] font-bold uppercase tracking-wider text-emerald-700 bg-emerald-100 px-2.5 py-0.5 rounded-full">
-                  Form Penguji Ujian Lisan
+                <span className="text-[10px] font-black uppercase tracking-wider text-emerald-700 bg-emerald-100/80 px-2.5 py-0.5 rounded-full inline-block">
+                  Tahfidz Oral Examination
                 </span>
-                <h2 className="text-xl font-extrabold text-slate-900 mt-1">
-                  Persiapan Evaluasi Hafalan
+                <h2 className="text-xl sm:text-2xl font-black text-slate-900 mt-1 tracking-tight">
+                  Persiapan Ujian Lisan Santri
                 </h2>
                 <p className="text-xs text-slate-500 mt-0.5">
-                  Pilih santri yang akan diuji dan atur juz yang akan dievaluasi.
+                  Tentukan santri yang akan diuji, jenis evaluasi, serta cakupan juz hafalan.
                 </p>
               </div>
-              <div className="hidden sm:block text-right">
-                <span className="text-xs text-slate-400 block">Unit Terpilih:</span>
-                <span className="text-sm font-bold text-slate-800">
-                  {marhalah === 'MI' ? 'Madrasah Ibtidaiyah' : 'Ula / MTs'} ({kampus === 'BANIN' ? 'Banin' : 'Banat'})
+              <div className="bg-white/80 p-2.5 rounded-xl border border-emerald-100 shrink-0 text-left sm:text-right">
+                <span className="text-[10px] text-slate-400 block uppercase font-bold">Unit Ujian:</span>
+                <span className="text-xs font-extrabold text-emerald-950">
+                  {marhalah === 'MI' ? 'Madrasah Ibtidaiyah' : 'Ula / MTs'} • {kampus === 'BANIN' ? 'Banin' : 'Banat'}
                 </span>
               </div>
             </div>
           </div>
 
           <div className="p-5 sm:p-6 space-y-6">
-            {/* 0. Identitas Penguji yang Menyimak */}
-            <div className="bg-emerald-50/70 p-4 rounded-xl border border-emerald-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            {/* 1. Penguji yang Menyimak */}
+            <div className="bg-emerald-50/60 p-4 rounded-2xl border border-emerald-200/80 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-xl bg-emerald-600 text-white flex items-center justify-center font-bold text-xs shrink-0 shadow-xs">
+                <div className="w-10 h-10 rounded-xl bg-emerald-600 text-white flex items-center justify-center font-bold text-xs shrink-0 shadow-xs">
                   Ust
                 </div>
                 <div>
@@ -337,7 +452,7 @@ export const ExamScoringView: React.FC<ExamScoringViewProps> = ({
                     Asatidz / Penguji yang Menyimak:
                   </label>
                   <p className="text-[11px] text-emerald-700">
-                    Nilai ujian santri akan resmi terdata disimak oleh penguji ini.
+                    Nilai resmi santri akan terdata disimak dan diuji oleh penguji ini.
                   </p>
                 </div>
               </div>
@@ -346,7 +461,7 @@ export const ExamScoringView: React.FC<ExamScoringViewProps> = ({
                 <select
                   value={selectedPenguji}
                   onChange={(e) => setSelectedPenguji(e.target.value)}
-                  className="w-full sm:w-auto px-3.5 py-2 rounded-xl border border-emerald-300 bg-white text-xs font-extrabold text-slate-800 focus:ring-2 focus:ring-emerald-500 shadow-xs"
+                  className="w-full sm:w-auto px-3.5 py-2.5 rounded-xl border border-emerald-300 bg-white text-xs font-extrabold text-slate-800 focus:ring-2 focus:ring-emerald-500 shadow-xs cursor-pointer"
                 >
                   {pengujiList.length > 0 ? (
                     pengujiList.map(p => (
@@ -361,123 +476,214 @@ export const ExamScoringView: React.FC<ExamScoringViewProps> = ({
               </div>
             </div>
 
-            {/* 1. Jenis Ujian */}
+            {/* 2. Jenis Ujian: UTS vs UAS */}
             <div>
-              <label className="block text-xs font-extrabold text-slate-700 uppercase tracking-wider mb-2">
-                Pilih Jenis Ujian:
+              <label className="block text-xs font-black text-slate-700 uppercase tracking-wider mb-2">
+                Pilih Jenis Ujian Tahfidz:
               </label>
-              <div className="grid grid-cols-2 gap-3">
-                <label
-                  className={`flex items-center gap-3 p-3.5 rounded-xl border-2 cursor-pointer transition-all ${
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <button
+                  type="button"
+                  onClick={() => setJenisUjian('UTS')}
+                  className={`p-4 rounded-2xl border-2 text-left transition-all relative ${
                     jenisUjian === 'UTS'
-                      ? 'border-emerald-600 bg-emerald-50/50 shadow-xs'
+                      ? 'border-emerald-600 bg-emerald-50/50 shadow-sm ring-1 ring-emerald-500/30'
                       : 'border-slate-200 hover:border-slate-300 bg-white'
                   }`}
                 >
-                  <input
-                    type="radio"
-                    name="jenisUjian"
-                    value="UTS"
-                    checked={jenisUjian === 'UTS'}
-                    onChange={() => setJenisUjian('UTS')}
-                    className="text-emerald-600 focus:ring-emerald-500"
-                  />
-                  <div>
-                    <span className="block text-sm font-bold text-slate-900">UTS (Tengah Semester)</span>
-                    <span className="block text-xs text-slate-500">Standar 10 Soal Evaluasi Hafalan</span>
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="font-extrabold text-sm text-slate-900">
+                      Penilaian Tengah Semester (UTS)
+                    </span>
+                    {jenisUjian === 'UTS' && (
+                      <span className="w-5 h-5 rounded-full bg-emerald-600 text-white flex items-center justify-center text-xs">
+                        <Check className="w-3 h-3 stroke-[3]" />
+                      </span>
+                    )}
                   </div>
-                </label>
+                  <p className="text-xs text-slate-500">
+                    Standar 10 butir soal (Sesi 1: Soal 1–5, Sesi 2: Soal 6–10).
+                  </p>
+                </button>
 
-                <label
-                  className={`flex items-center gap-3 p-3.5 rounded-xl border-2 cursor-pointer transition-all ${
+                <button
+                  type="button"
+                  onClick={() => setJenisUjian('UAS')}
+                  className={`p-4 rounded-2xl border-2 text-left transition-all relative ${
                     jenisUjian === 'UAS'
-                      ? 'border-emerald-600 bg-emerald-50/50 shadow-xs'
+                      ? 'border-emerald-600 bg-emerald-50/50 shadow-sm ring-1 ring-emerald-500/30'
                       : 'border-slate-200 hover:border-slate-300 bg-white'
                   }`}
                 >
-                  <input
-                    type="radio"
-                    name="jenisUjian"
-                    value="UAS"
-                    checked={jenisUjian === 'UAS'}
-                    onChange={() => setJenisUjian('UAS')}
-                    className="text-emerald-600 focus:ring-emerald-500"
-                  />
-                  <div>
-                    <span className="block text-sm font-bold text-slate-900">UAS / PAS (Akhir Semester)</span>
-                    <span className="block text-xs text-slate-500">Dinamis 1–10 Juz (5 Soal per Juz)</span>
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="font-extrabold text-sm text-slate-900">
+                      Penilaian Akhir Semester (UAS / PAS)
+                    </span>
+                    {jenisUjian === 'UAS' && (
+                      <span className="w-5 h-5 rounded-full bg-emerald-600 text-white flex items-center justify-center text-xs">
+                        <Check className="w-3 h-3 stroke-[3]" />
+                      </span>
+                    )}
                   </div>
-                </label>
+                  <p className="text-xs text-slate-500">
+                    Dinamis 1–10 Juz sesuai capaian santri (5 Soal per 1 Juz).
+                  </p>
+                </button>
               </div>
             </div>
 
-            {/* 2. Pilih Santri */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <div className="sm:col-span-2">
-                <label className="block text-xs font-extrabold text-slate-700 uppercase tracking-wider mb-2">
-                  Pilih Nama Santri:
-                </label>
-                <select
-                  value={selectedSantriId}
-                  onChange={(e) => setSelectedSantriId(e.target.value)}
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 bg-white text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
-                >
-                  {filteredSantri.map(s => (
-                    <option key={s.id} value={s.id}>
-                      {s.nama} — {s.kelas}
-                    </option>
-                  ))}
-                </select>
-              </div>
+            {/* 3. Pilih Santri dengan Search / Filter Cepat */}
+            <div className="space-y-2">
+              <label className="block text-xs font-black text-slate-700 uppercase tracking-wider">
+                Pilih Nama Santri Peserta Ujian:
+              </label>
 
-              <div>
-                <label className="block text-xs font-extrabold text-slate-700 uppercase tracking-wider mb-2">
-                  NISN:
-                </label>
+              {/* Quick Search */}
+              <div className="relative">
+                <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
                 <input
                   type="text"
-                  readOnly
-                  value={currentSantri?.nisn || '-'}
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-slate-50 text-slate-500 text-sm font-mono"
+                  value={santriSearch}
+                  onChange={(e) => setSantriSearch(e.target.value)}
+                  placeholder="Ketik nama santri atau kelas untuk memfilter daftar..."
+                  className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-300 text-xs font-medium text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500"
                 />
               </div>
+
+              {/* Santri Select Grid / List */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-48 overflow-y-auto p-1 border border-slate-200 rounded-2xl bg-slate-50/40">
+                {searchedSantriList.map((s) => {
+                  const isSelected = s.id === selectedSantriId;
+                  return (
+                    <button
+                      key={s.id}
+                      type="button"
+                      onClick={() => setSelectedSantriId(s.id)}
+                      className={`p-3 rounded-xl text-left border transition-all flex items-center justify-between ${
+                        isSelected
+                          ? 'bg-emerald-600 text-white border-emerald-700 shadow-xs'
+                          : 'bg-white text-slate-800 border-slate-200 hover:border-emerald-300 hover:bg-emerald-50/40'
+                      }`}
+                    >
+                      <div className="min-w-0 pr-2">
+                        <p className="font-extrabold text-xs truncate">{s.nama}</p>
+                        <p className={`text-[10px] mt-0.5 truncate ${isSelected ? 'text-emerald-100' : 'text-slate-400'}`}>
+                          Kelas: {s.kelas} • NISN: {s.nisn}
+                        </p>
+                      </div>
+                      {isSelected ? (
+                        <Check className="w-4 h-4 text-white shrink-0" />
+                      ) : (
+                        <span className="text-[10px] px-2 py-0.5 rounded bg-slate-100 text-slate-600 font-bold shrink-0">
+                          {s.targetJuz || 'Juz 30'}
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Selected Santri Detail Preview Card */}
+              {currentSantri && (
+                <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200/90 text-xs grid grid-cols-2 sm:grid-cols-4 gap-3 mt-2">
+                  <div>
+                    <span className="text-slate-400 block text-[10px] font-bold uppercase">Santri Terpilih:</span>
+                    <span className="font-extrabold text-slate-900 text-sm">{currentSantri.nama}</span>
+                  </div>
+                  <div>
+                    <span className="text-slate-400 block text-[10px] font-bold uppercase">Kelas / Jenjang:</span>
+                    <span className="font-bold text-slate-800">{currentSantri.kelas}</span>
+                  </div>
+                  <div>
+                    <span className="text-slate-400 block text-[10px] font-bold uppercase">Halaqah Asrama:</span>
+                    <span className="font-bold text-slate-800">{currentSantri.halaqah || 'Umum'}</span>
+                  </div>
+                  <div>
+                    <span className="text-slate-400 block text-[10px] font-bold uppercase">Target Kurikulum:</span>
+                    <span className="inline-block mt-0.5 px-2 py-0.5 rounded-md font-extrabold bg-emerald-100 text-emerald-800 text-[11px]">
+                      {currentSantri.targetJuz || 'Juz 30'}
+                    </span>
+                  </div>
+                </div>
+              )}
+
+              {/* Status Cicilan / Nilai Tersimpan Ditemukan (Diletakkan tepat di bawah kartu Santri Terpilih) */}
+              {existingRecord && (
+                <div className="p-4 rounded-2xl bg-amber-50/90 border border-amber-300/90 flex items-start gap-3 text-xs text-amber-950 mt-2 shadow-2xs">
+                  <Clock className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+                  <div className="flex-1 min-w-0">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <span className="font-extrabold text-xs sm:text-sm text-amber-950">
+                        Data {existingRecord.status === 'DRAFT' ? 'Cicilan Ujian' : 'Ujian Tersimpan'} Ditemukan
+                      </span>
+                      <span className={`shrink-0 px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider whitespace-nowrap border ${
+                        existingRecord.status === 'SELESAI'
+                          ? 'bg-emerald-100 text-emerald-800 border-emerald-300'
+                          : 'bg-amber-200 text-amber-900 border-amber-300'
+                      }`}>
+                        {existingRecord.status === 'DRAFT' ? 'Draft Cicilan' : 'Selesai'}
+                      </span>
+                    </div>
+                    <p className="mt-1 text-[11px] text-slate-700 leading-relaxed">
+                      Santri <strong>{existingRecord.namaSantri}</strong> memiliki rekaman ujian pada {existingRecord.updatedAt} oleh {existingRecord.pengujiNama}. Rata-rata sementara: <strong className="text-emerald-800 font-mono font-black">{existingRecord.rataRata.toFixed(1)}</strong> ({existingRecord.predikat}).
+                    </p>
+                  </div>
+                </div>
+              )}
             </div>
 
-            {/* Info Halaqah & Target Santri */}
-            {currentSantri && (
-              <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-200 text-xs flex flex-wrap items-center justify-between gap-2">
-                <div className="flex items-center gap-2">
-                  <span className="font-bold text-slate-700">Halaqah:</span>
-                  <span className="text-slate-600">{currentSantri.halaqah || 'Umum'}</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="font-bold text-emerald-800">Target Kurikulum:</span>
-                  <span className="bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-md font-bold">
-                    {currentSantri.targetJuz || 'Juz 30'}
-                  </span>
-                </div>
-              </div>
-            )}
-
-            {/* 3. Khusus UAS: Checklist Juz (Juz 1 s/d 30) */}
+            {/* 4. Khusus UAS: Checklist Juz (Juz 1 s/d 30) */}
             {jenisUjian === 'UAS' && (
-              <div className="p-4 sm:p-5 bg-emerald-50/70 rounded-2xl border border-emerald-200/80 space-y-3">
-                <div className="flex items-center justify-between">
+              <div className="p-4 sm:p-5 bg-emerald-50/60 rounded-3xl border border-emerald-200/80 space-y-3">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                   <div>
-                    <h3 className="text-xs font-extrabold uppercase tracking-wider text-emerald-950">
+                    <h3 className="text-xs font-black uppercase tracking-wider text-emerald-950">
                       Pilih Juz yang Diujikan (Maks. 10 Juz):
                     </h3>
-                    <p className="text-[11px] text-emerald-800/80 mt-0.5">
+                    <p className="text-[11px] text-emerald-800/80">
                       Setiap 1 juz terdiri dari 5 butir soal hafalan.
                     </p>
                   </div>
-                  <span className="px-3 py-1 rounded-full text-xs font-extrabold bg-emerald-600 text-white shadow-xs">
-                    {selectedJuz.length} Juz ({selectedJuz.length * 5} Soal)
+                  <span className="px-3.5 py-1.5 rounded-xl text-xs font-black bg-emerald-600 text-white shadow-xs self-start sm:self-auto">
+                    {selectedJuz.length} Juz Dipilih • {selectedJuz.length * 5} Butir Soal
                   </span>
                 </div>
 
+                {/* Quick Presets for Juz Selection */}
+                <div className="flex flex-wrap gap-1.5 pt-1">
+                  <span className="text-[10px] font-bold uppercase text-emerald-800 self-center mr-1">Pilihan Cepat:</span>
+                  <button
+                    type="button"
+                    onClick={() => handleJuzPreset('juz30')}
+                    className="px-2.5 py-1 bg-white hover:bg-emerald-100 text-emerald-800 rounded-lg text-[11px] font-bold border border-emerald-200 shadow-2xs"
+                  >
+                    Juz 30 (5 Soal)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleJuzPreset('juz29_30')}
+                    className="px-2.5 py-1 bg-white hover:bg-emerald-100 text-emerald-800 rounded-lg text-[11px] font-bold border border-emerald-200 shadow-2xs"
+                  >
+                    Juz 30 & 29 (10 Soal)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleJuzPreset('juz28_30')}
+                    className="px-2.5 py-1 bg-white hover:bg-emerald-100 text-emerald-800 rounded-lg text-[11px] font-bold border border-emerald-200 shadow-2xs"
+                  >
+                    Juz 28–30 (15 Soal)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleJuzPreset('juz1_3')}
+                    className="px-2.5 py-1 bg-white hover:bg-emerald-100 text-emerald-800 rounded-lg text-[11px] font-bold border border-emerald-200 shadow-2xs"
+                  >
+                    Juz 1–3 (15 Soal)
+                  </button>
+                </div>
+
                 {/* Grid Checklist Juz 30 s/d 1 */}
-                <div className="grid grid-cols-5 sm:grid-cols-6 md:grid-cols-10 gap-1.5 p-2 bg-white rounded-xl border border-emerald-200/80 max-h-48 overflow-y-auto">
+                <div className="grid grid-cols-5 sm:grid-cols-6 md:grid-cols-10 gap-1.5 p-2.5 bg-white rounded-2xl border border-emerald-200/90 max-h-52 overflow-y-auto">
                   {Array.from({ length: 30 }, (_, i) => 30 - i).map(juzNum => {
                     const juzName = `Juz ${juzNum}`;
                     const isChecked = selectedJuz.includes(juzName);
@@ -486,7 +692,7 @@ export const ExamScoringView: React.FC<ExamScoringViewProps> = ({
                         key={juzNum}
                         type="button"
                         onClick={() => handleJuzToggle(juzName)}
-                        className={`py-1.5 px-1 rounded-lg text-xs font-bold border transition-all text-center ${
+                        className={`py-2 px-1 rounded-xl text-xs font-black border transition-all text-center ${
                           isChecked
                             ? 'bg-emerald-600 text-white border-emerald-700 shadow-xs'
                             : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-emerald-100 hover:border-emerald-300'
@@ -505,9 +711,9 @@ export const ExamScoringView: React.FC<ExamScoringViewProps> = ({
               <button
                 type="button"
                 onClick={handleStartExam}
-                className="w-full sm:w-auto px-6 py-3 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-extrabold rounded-xl shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2"
+                className="w-full sm:w-auto px-7 py-3.5 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-black rounded-2xl shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2 active:scale-95"
               >
-                <span>Mulai / Buka Lembar Penilaian</span>
+                <span>{existingRecord ? 'Lanjutkan Lembar Penilaian' : 'Mulai / Buka Lembar Penilaian'}</span>
                 <ArrowRight className="w-4 h-4" />
               </button>
             </div>
@@ -519,26 +725,31 @@ export const ExamScoringView: React.FC<ExamScoringViewProps> = ({
       {currentStep >= 1 && currentStep <= totalQuestions && currentSoal && (
         <div className="space-y-4">
           {/* Header Soal & Navigation Pill */}
-          <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-4 sm:p-5">
+          <div className="bg-white rounded-3xl shadow-sm border border-slate-200/90 p-4 sm:p-5">
             <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 pb-3 mb-3">
               <div>
-                <span className="text-[11px] font-bold text-slate-400">Santri yang Diuji:</span>
-                <h3 className="text-base font-extrabold text-slate-900">
-                  {currentSantri?.nama} ({currentSantri?.kelas})
+                <span className="text-[10px] font-bold text-slate-400 uppercase block">Santri yang Diuji:</span>
+                <h3 className="text-base sm:text-lg font-black text-slate-900">
+                  {currentSantri?.nama}
+                  <span className="text-xs font-semibold text-slate-500 ml-2">
+                    ({currentSantri?.kelas})
+                  </span>
                 </h3>
               </div>
+
               <div className="flex items-center gap-2">
                 <button
                   type="button"
                   onClick={() => setCurrentStep(0)}
-                  className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-bold transition-all"
+                  className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition active:scale-95"
                 >
                   Pengaturan
                 </button>
                 <button
                   type="button"
                   onClick={handleSaveProgress}
-                  className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-white rounded-lg text-xs font-bold shadow-xs transition-all"
+                  className="flex items-center gap-1.5 px-3.5 py-1.5 bg-amber-500 hover:bg-amber-600 text-white rounded-xl text-xs font-black shadow-xs transition active:scale-95"
+                  title="Simpan cicilan nilai hingga butir soal saat ini"
                 >
                   <Save className="w-3.5 h-3.5" />
                   <span>Simpan Cicilan</span>
@@ -546,110 +757,136 @@ export const ExamScoringView: React.FC<ExamScoringViewProps> = ({
               </div>
             </div>
 
+            {/* Progress Bar */}
+            <div className="space-y-1.5 mb-3">
+              <div className="flex justify-between text-[11px] font-bold text-slate-600">
+                <span>Progress Soal ({currentStep} dari {totalQuestions})</span>
+                <span className="text-emerald-700">{progressPercent}%</span>
+              </div>
+              <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
+                <div 
+                  className="h-full bg-gradient-to-r from-emerald-500 to-teal-500 transition-all duration-300 rounded-full"
+                  style={{ width: `${progressPercent}%` }}
+                ></div>
+              </div>
+            </div>
+
             {/* Quick Navigation Pills: Lompat Juz / Kelompok Soal */}
             <div className="space-y-1.5">
-              <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 block">
-                Navigasi Soal / Juz:
+              <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 block">
+                Navigasi Cepat Butir Soal:
               </span>
-              <div className="flex flex-wrap gap-1.5 max-h-24 overflow-y-auto">
-                {jenisUjian === 'UAS'
-                  ? selectedJuz.map((juzName, idx) => {
-                      const start = idx * 5 + 1;
-                      const end = start + 4;
-                      const isActive = currentStep >= start && currentStep <= end;
-                      return (
-                        <button
-                          key={juzName}
-                          type="button"
-                          onClick={() => setCurrentStep(start)}
-                          className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all border ${
-                            isActive
-                              ? 'bg-emerald-600 text-white border-emerald-700 shadow-sm'
-                              : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-emerald-50'
-                          }`}
-                        >
-                          {juzName} {isActive ? '⚡' : ''}
-                        </button>
-                      );
-                    })
-                  : (
-                    <>
-                      <button
-                        type="button"
-                        onClick={() => setCurrentStep(1)}
-                        className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all border ${
-                          currentStep >= 1 && currentStep <= 5
-                            ? 'bg-emerald-600 text-white border-emerald-700 shadow-sm'
-                            : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-emerald-50'
-                        }`}
-                      >
-                        Soal 1–5
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setCurrentStep(6)}
-                        className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all border ${
-                          currentStep >= 6 && currentStep <= 10
-                            ? 'bg-emerald-600 text-white border-emerald-700 shadow-sm'
-                            : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-emerald-50'
-                        }`}
-                      >
-                        Soal 6–10
-                      </button>
-                    </>
-                  )}
+              <div className="flex items-center gap-1.5 overflow-x-auto pb-1">
+                {soalList.map((s, idx) => {
+                  const num = idx + 1;
+                  const isCurrent = currentStep === num;
+                  const hasErrors = s.sb > 0 || s.sk > 0;
+                  return (
+                    <button
+                      key={num}
+                      type="button"
+                      onClick={() => setCurrentStep(num)}
+                      className={`min-w-[34px] h-[34px] rounded-xl text-xs font-black flex items-center justify-center transition-all border shrink-0 ${
+                        isCurrent
+                          ? 'bg-emerald-600 text-white border-emerald-700 shadow-sm scale-105'
+                          : hasErrors
+                          ? 'bg-amber-50 text-amber-800 border-amber-300 hover:bg-amber-100'
+                          : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-emerald-50'
+                      }`}
+                      title={`Soal ${num}: Nilai ${s.nilaiAkhirSoal}`}
+                    >
+                      {num}
+                    </button>
+                  );
+                })}
               </div>
             </div>
           </div>
 
-          {/* CARD SOAL UTAMA */}
-          <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+          {/* CARD SOAL UTAMA - DIBERI ANIMASI HALUS SETIAP GANTI SOAL */}
+          <div key={currentStep} className="bg-white rounded-3xl shadow-sm border border-slate-200/90 overflow-hidden animate-fade-up">
             {/* Banner Nomor Soal */}
-            <div className="bg-gradient-to-r from-emerald-600 to-teal-700 text-white px-5 py-3.5 flex items-center justify-between">
+            <div className="bg-gradient-to-r from-emerald-700 via-teal-700 to-emerald-800 text-white px-5 py-4 flex items-center justify-between">
               <div>
-                <span className="text-[11px] font-bold text-emerald-200 uppercase tracking-widest block">
-                  {currentSoal.juzLabel ? `${currentSoal.juzLabel} • Butir Soal` : 'Ujian Tengah Semester'}
+                <span className="text-[10px] font-bold text-emerald-200 uppercase tracking-widest block">
+                  {currentSoal.juzLabel ? `${currentSoal.juzLabel} • Butir Soal` : 'Ujian Tengah Semester (UTS)'}
                 </span>
-                <h4 className="text-lg font-black tracking-tight">
+                <h4 className="text-lg sm:text-xl font-black tracking-tight">
                   Soal ke-{currentStep} dari {totalQuestions}
                 </h4>
               </div>
               <div className="text-right">
                 <span className="text-[10px] uppercase font-bold text-emerald-200 block">Nilai Soal Ini</span>
-                <span className="text-2xl font-black">{currentSoal.nilaiAkhirSoal.toFixed(1)}</span>
+                <span className="text-2xl sm:text-3xl font-black font-mono">
+                  {currentSoal.nilaiAkhirSoal.toFixed(1)}
+                </span>
+              </div>
+            </div>
+
+            {/* Quick Scoring Preset Toolbar (Mumtaz, Lancar, Reset) */}
+            <div className="bg-slate-50 px-4 sm:px-6 py-2.5 border-b border-slate-200/80 flex flex-wrap items-center justify-between gap-2">
+              <span className="text-[11px] font-bold text-slate-500">Preset Cepat:</span>
+              <div className="flex items-center gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => setQuickScorePreset(currentSoalIndex, 'mumtaz')}
+                  className="px-2.5 py-1 bg-emerald-100 hover:bg-emerald-200 text-emerald-900 rounded-lg text-xs font-black transition flex items-center gap-1 active:scale-95"
+                >
+                  <Sparkles className="w-3.5 h-3.5 text-emerald-600" />
+                  <span>Lancar Sempurna (100)</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setQuickScorePreset(currentSoalIndex, 'lancar_baik')}
+                  className="px-2.5 py-1 bg-blue-100 hover:bg-blue-200 text-blue-900 rounded-lg text-xs font-bold transition active:scale-95"
+                >
+                  Lancar Baik (98)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setQuickScorePreset(currentSoalIndex, 'reset')}
+                  className="px-2 py-1 text-slate-500 hover:text-slate-800 text-xs font-bold transition flex items-center gap-1"
+                >
+                  <RotateCcw className="w-3 h-3" />
+                  <span>Reset</span>
+                </button>
               </div>
             </div>
 
             {/* Input Counter SB, SK, Tahsin */}
-            <div className="p-5 sm:p-6 space-y-6">
+            <div className="p-4 sm:p-6 space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 {/* 1. Salah Besar (SB) */}
-                <div className="p-4 rounded-xl border border-red-200 bg-red-50/40">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-xs font-extrabold text-red-900 uppercase tracking-wider">
+                <div className="p-4 rounded-2xl border-2 border-red-200 bg-red-50/40 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-black text-red-950 uppercase tracking-wider">
                       Salah Besar (SB)
                     </span>
-                    <span className="text-[11px] font-bold text-red-600 bg-red-100 px-2 py-0.5 rounded">
-                      -1.0 / salah
+                    <span className="text-[10px] font-extrabold text-red-700 bg-red-100 px-2 py-0.5 rounded-full">
+                      -1.0 per salah
                     </span>
                   </div>
-                  <p className="text-[11px] text-slate-500 mb-3">Lupa ayat / tertukar ayat & harakat fatal.</p>
+                  <p className="text-[11px] text-slate-500 leading-snug">
+                    Lupa ayat, tertukar baris/ayat, atau harakat fatal yang mengubah makna.
+                  </p>
 
-                  <div className="flex items-center justify-between bg-white rounded-xl border border-red-200 overflow-hidden shadow-xs">
+                  <div className="flex items-center justify-between bg-white rounded-2xl border border-red-200 overflow-hidden shadow-2xs mt-2">
                     <button
                       type="button"
                       onClick={() => updateScore(currentSoalIndex, 'sb', -1)}
-                      className="px-4 py-2.5 text-lg font-black text-slate-600 hover:bg-red-100 hover:text-red-700 transition"
+                      className="min-w-[48px] min-h-[48px] text-xl font-black text-slate-600 hover:bg-red-100 hover:text-red-700 btn-tactile active:scale-75 flex items-center justify-center select-none"
+                      aria-label="Kurangi Salah Besar"
                     >
                       -
                     </button>
-                    <span className="text-xl font-black text-red-700 font-mono">
+                    <span key={currentSoal.sb} className="text-2xl font-black text-red-700 font-mono animate-pop inline-block">
                       {currentSoal.sb}
                     </span>
                     <button
                       type="button"
                       onClick={() => updateScore(currentSoalIndex, 'sb', +1)}
-                      className="px-4 py-2.5 text-lg font-black text-slate-600 hover:bg-red-100 hover:text-red-700 transition"
+                      className="min-w-[48px] min-h-[48px] text-xl font-black text-slate-600 hover:bg-red-100 hover:text-red-700 btn-tactile active:scale-75 flex items-center justify-center select-none"
+                      aria-label="Tambah Salah Besar"
                     >
                       +
                     </button>
@@ -657,32 +894,36 @@ export const ExamScoringView: React.FC<ExamScoringViewProps> = ({
                 </div>
 
                 {/* 2. Salah Kecil (SK) */}
-                <div className="p-4 rounded-xl border border-amber-200 bg-amber-50/40">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-xs font-extrabold text-amber-900 uppercase tracking-wider">
+                <div className="p-4 rounded-2xl border-2 border-amber-200 bg-amber-50/40 space-y-2 card-lift">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-black text-amber-950 uppercase tracking-wider">
                       Salah Kecil (SK)
                     </span>
-                    <span className="text-[11px] font-bold text-amber-700 bg-amber-100 px-2 py-0.5 rounded">
-                      -0.2 (SK/5)
+                    <span className="text-[10px] font-extrabold text-amber-800 bg-amber-100 px-2 py-0.5 rounded-full">
+                      -0.2 (5 SK = 1 SB)
                     </span>
                   </div>
-                  <p className="text-[11px] text-slate-500 mb-3">Ragu sejenak lalu membetulkan sendiri.</p>
+                  <p className="text-[11px] text-slate-500 leading-snug">
+                    Ragu sejenak lalu membetulkan sendiri, atau tajwid ringan.
+                  </p>
 
-                  <div className="flex items-center justify-between bg-white rounded-xl border border-amber-200 overflow-hidden shadow-xs">
+                  <div className="flex items-center justify-between bg-white rounded-2xl border border-amber-200 overflow-hidden shadow-2xs mt-2">
                     <button
                       type="button"
                       onClick={() => updateScore(currentSoalIndex, 'sk', -1)}
-                      className="px-4 py-2.5 text-lg font-black text-slate-600 hover:bg-amber-100 hover:text-amber-700 transition"
+                      className="min-w-[48px] min-h-[48px] text-xl font-black text-slate-600 hover:bg-amber-100 hover:text-amber-700 btn-tactile active:scale-75 flex items-center justify-center select-none"
+                      aria-label="Kurangi Salah Kecil"
                     >
                       -
                     </button>
-                    <span className="text-xl font-black text-amber-700 font-mono">
+                    <span key={currentSoal.sk} className="text-2xl font-black text-amber-700 font-mono animate-pop inline-block">
                       {currentSoal.sk}
                     </span>
                     <button
                       type="button"
                       onClick={() => updateScore(currentSoalIndex, 'sk', +1)}
-                      className="px-4 py-2.5 text-lg font-black text-slate-600 hover:bg-amber-100 hover:text-amber-700 transition"
+                      className="min-w-[48px] min-h-[48px] text-xl font-black text-slate-600 hover:bg-amber-100 hover:text-amber-700 btn-tactile active:scale-75 flex items-center justify-center select-none"
+                      aria-label="Tambah Salah Kecil"
                     >
                       +
                     </button>
@@ -690,32 +931,36 @@ export const ExamScoringView: React.FC<ExamScoringViewProps> = ({
                 </div>
 
                 {/* 3. Tahsin / Tajwid (0-6) */}
-                <div className="p-4 rounded-xl border border-indigo-200 bg-indigo-50/40">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-xs font-extrabold text-indigo-900 uppercase tracking-wider">
+                <div className="p-4 rounded-2xl border-2 border-indigo-200 bg-indigo-50/40 space-y-2 card-lift">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-black text-indigo-950 uppercase tracking-wider">
                       Tahsin / Tajwid
                     </span>
-                    <span className="text-[11px] font-bold text-indigo-700 bg-indigo-100 px-2 py-0.5 rounded">
+                    <span className="text-[10px] font-extrabold text-indigo-800 bg-indigo-100 px-2 py-0.5 rounded-full">
                       Skor 0 s.d. 6
                     </span>
                   </div>
-                  <p className="text-[11px] text-slate-500 mb-3">Makharijul huruf & shifatul huruf.</p>
+                  <p className="text-[11px] text-slate-500 leading-snug">
+                    Makhraj huruf, sifat huruf, kelancaran tartil sesuai kaidah.
+                  </p>
 
-                  <div className="flex items-center justify-between bg-white rounded-xl border border-indigo-200 overflow-hidden shadow-xs">
+                  <div className="flex items-center justify-between bg-white rounded-2xl border border-indigo-200 overflow-hidden shadow-2xs mt-2">
                     <button
                       type="button"
                       onClick={() => updateScore(currentSoalIndex, 'tahsin', -1)}
-                      className="px-4 py-2.5 text-lg font-black text-slate-600 hover:bg-indigo-100 hover:text-indigo-700 transition"
+                      className="min-w-[48px] min-h-[48px] text-xl font-black text-slate-600 hover:bg-indigo-100 hover:text-indigo-700 btn-tactile active:scale-75 flex items-center justify-center select-none"
+                      aria-label="Kurangi Skor Tahsin"
                     >
                       -
                     </button>
-                    <span className="text-xl font-black text-indigo-700 font-mono">
+                    <span key={currentSoal.tahsin} className="text-2xl font-black text-indigo-700 font-mono animate-pop inline-block">
                       {currentSoal.tahsin}
                     </span>
                     <button
                       type="button"
                       onClick={() => updateScore(currentSoalIndex, 'tahsin', +1)}
-                      className="px-4 py-2.5 text-lg font-black text-slate-600 hover:bg-indigo-100 hover:text-indigo-700 transition"
+                      className="min-w-[48px] min-h-[48px] text-xl font-black text-slate-600 hover:bg-indigo-100 hover:text-indigo-700 btn-tactile active:scale-75 flex items-center justify-center select-none"
+                      aria-label="Tambah Skor Tahsin"
                     >
                       +
                     </button>
@@ -723,51 +968,23 @@ export const ExamScoringView: React.FC<ExamScoringViewProps> = ({
                 </div>
               </div>
 
-              {/* Rincian Live Calculation Soal Ini */}
-              <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
-                <div>
-                  <span className="text-slate-500 block">KBE (SB + SK/5):</span>
-                  <span className="font-extrabold text-slate-800 text-sm font-mono">
-                    {currentSoal.kbe.toFixed(2)}
-                  </span>
-                </div>
-                <div>
-                  <span className="text-slate-500 block">Nilai Dasar (Min 50):</span>
-                  <span className="font-extrabold text-slate-800 text-sm font-mono">
-                    {currentSoal.nilaiDasar.toFixed(1)}
-                  </span>
-                </div>
-                <div>
-                  <span className="text-slate-500 block">Bonus Tahsin:</span>
-                  <span className="font-extrabold text-emerald-700 text-sm font-mono">
-                    +{currentSoal.bonusTahsin}
-                  </span>
-                </div>
-                <div>
-                  <span className="text-slate-500 block">Predikat Soal:</span>
-                  <span className="font-extrabold text-emerald-800 text-sm">
-                    {getPredikat(currentSoal.nilaiAkhirSoal)}
-                  </span>
-                </div>
-              </div>
-
-              {/* Navigasi Bawah */}
-              <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-4 border-t border-slate-100">
+              {/* Tombol Navigasi Soal (Diposisikan langsung di bawah input skor) */}
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-2">
                 <button
                   type="button"
                   onClick={() => setCurrentStep(prev => Math.max(1, prev - 1))}
                   disabled={currentStep === 1}
-                  className="w-full sm:w-auto px-4 py-2.5 rounded-xl border border-slate-300 text-slate-700 text-xs font-bold hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-1.5"
+                  className="w-full sm:w-auto px-5 py-3 rounded-2xl border border-slate-300 text-slate-700 text-xs font-black hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2 active:scale-95"
                 >
                   <ArrowLeft className="w-4 h-4" />
                   <span>Sebelumnya</span>
                 </button>
 
-                {/* Tombol Simpan Cicilan setiap kelipatan 5 atau kapan saja */}
+                {/* Tombol Simpan Cicilan */}
                 <button
                   type="button"
                   onClick={handleSaveProgress}
-                  className="w-full sm:w-auto px-4 py-2.5 bg-amber-500 hover:bg-amber-600 text-white rounded-xl text-xs font-extrabold shadow-sm transition flex items-center justify-center gap-1.5"
+                  className="w-full sm:w-auto px-5 py-3 bg-amber-500 hover:bg-amber-600 text-white rounded-2xl text-xs font-black shadow-xs transition flex items-center justify-center gap-2 active:scale-95"
                 >
                   <Save className="w-4 h-4" />
                   <span>Simpan Progress (Cicilan)</span>
@@ -776,11 +993,39 @@ export const ExamScoringView: React.FC<ExamScoringViewProps> = ({
                 <button
                   type="button"
                   onClick={() => setCurrentStep(prev => prev + 1)}
-                  className="w-full sm:w-auto px-6 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-extrabold shadow-sm transition flex items-center justify-center gap-1.5"
+                  className="w-full sm:w-auto px-7 py-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl text-xs font-black shadow-sm transition flex items-center justify-center gap-2 active:scale-95"
                 >
-                  <span>{currentStep === totalQuestions ? 'Review & Selesai' : 'Soal Selanjutnya'}</span>
+                  <span>{currentStep === totalQuestions ? 'Review Seluruh Nilai' : 'Soal Selanjutnya'}</span>
                   <ArrowRight className="w-4 h-4" />
                 </button>
+              </div>
+
+              {/* Rincian Live Calculation Soal Ini (Hasil Sementara) */}
+              <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200/90 grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+                <div>
+                  <span className="text-slate-400 block text-[10px] font-bold uppercase">KBE (SB + SK/5):</span>
+                  <span className="font-black text-slate-800 text-sm font-mono">
+                    {currentSoal.kbe.toFixed(2)}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-slate-400 block text-[10px] font-bold uppercase">Nilai Dasar (Min 50):</span>
+                  <span className="font-black text-slate-800 text-sm font-mono">
+                    {currentSoal.nilaiDasar.toFixed(1)}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-slate-400 block text-[10px] font-bold uppercase">Bonus Tahsin:</span>
+                  <span className="font-black text-emerald-700 text-sm font-mono">
+                    +{currentSoal.bonusTahsin}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-slate-400 block text-[10px] font-bold uppercase">Predikat Soal:</span>
+                  <span className="font-black text-emerald-800 text-sm">
+                    {getPredikat(currentSoal.nilaiAkhirSoal)}
+                  </span>
+                </div>
               </div>
             </div>
           </div>
@@ -789,17 +1034,17 @@ export const ExamScoringView: React.FC<ExamScoringViewProps> = ({
 
       {/* STEP FINISH: REVIEW AKHIR SELURUH NILAI & SIMPAN PERMANEN */}
       {currentStep > totalQuestions && (
-        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-          <div className="p-6 border-b border-slate-100 bg-gradient-to-r from-emerald-50 to-teal-50">
+        <div className="bg-white rounded-3xl shadow-sm border border-slate-200/90 overflow-hidden">
+          <div className="p-6 border-b border-slate-100 bg-gradient-to-r from-emerald-50 via-teal-50 to-white">
             <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-2xl bg-emerald-600 text-white flex items-center justify-center shadow-md">
+              <div className="w-12 h-12 rounded-2xl bg-emerald-600 text-white flex items-center justify-center shadow-md shadow-emerald-600/20">
                 <Award className="w-6 h-6" />
               </div>
               <div>
-                <span className="text-[11px] font-bold text-emerald-800 uppercase tracking-widest bg-emerald-200/70 px-2.5 py-0.5 rounded-full">
-                  Konfirmasi Akhir
+                <span className="text-[10px] font-black text-emerald-800 uppercase tracking-widest bg-emerald-200/70 px-2.5 py-0.5 rounded-full inline-block">
+                  Tahap Konfirmasi Akhir
                 </span>
-                <h3 className="text-xl font-black text-slate-900 mt-1">
+                <h3 className="text-xl font-black text-slate-900 mt-1 tracking-tight">
                   Ringkasan Nilai Ujian Hafalan
                 </h3>
                 <p className="text-xs text-slate-500">
@@ -815,18 +1060,18 @@ export const ExamScoringView: React.FC<ExamScoringViewProps> = ({
               const agregat = hitungAgregatUjian(soalList, jenisUjian === 'UAS', selectedJuz);
               const badge = getPredikatBadgeStyle(agregat.predikat);
               return (
-                <div className="p-5 rounded-2xl border border-emerald-200 bg-emerald-50/60 flex flex-col sm:flex-row items-center justify-between gap-4">
+                <div className="p-5 rounded-3xl border border-emerald-200 bg-emerald-50/60 flex flex-col sm:flex-row items-center justify-between gap-4">
                   <div>
-                    <span className="text-xs font-extrabold uppercase tracking-wider text-emerald-900">
+                    <span className="text-xs font-black uppercase tracking-wider text-emerald-950">
                       Rata-Rata Akhir Keseluruhan:
                     </span>
-                    <div className="text-4xl font-black text-emerald-800 mt-1">
+                    <div className="text-4xl font-black text-emerald-800 mt-1 font-mono">
                       {agregat.rataRata.toFixed(1)}
                     </div>
                   </div>
 
                   <div className="text-center sm:text-right">
-                    <span className="text-xs font-extrabold uppercase tracking-wider text-emerald-900 block mb-1">
+                    <span className="text-xs font-black uppercase tracking-wider text-emerald-950 block mb-1">
                       Predikat Capaian:
                     </span>
                     <span className={`inline-block px-4 py-1.5 rounded-full font-black text-sm uppercase border ${badge.bg} ${badge.border}`}>
@@ -837,19 +1082,20 @@ export const ExamScoringView: React.FC<ExamScoringViewProps> = ({
               );
             })()}
 
-            {/* Tabel Review Seluruh Butir Soal */}
-            <div className="overflow-x-auto rounded-xl border border-slate-200">
+            {/* Tabel Review Seluruh Butir Soal with Direct Edit Action */}
+            <div className="overflow-x-auto rounded-2xl border border-slate-200">
               <table className="w-full text-xs text-left border-collapse">
-                <thead className="bg-slate-100 text-slate-700 uppercase font-bold border-b border-slate-200">
+                <thead className="bg-slate-100 text-slate-700 uppercase font-black border-b border-slate-200">
                   <tr>
-                    <th className="px-3 py-2 text-center">No</th>
-                    <th className="px-3 py-2">Sesi / Juz</th>
-                    <th className="px-3 py-2 text-center text-red-600">SB (-1)</th>
-                    <th className="px-3 py-2 text-center text-amber-600">SK (-0.2)</th>
-                    <th className="px-3 py-2 text-center text-indigo-600">Tahsin</th>
-                    <th className="px-3 py-2 text-center font-bold">KBE</th>
-                    <th className="px-3 py-2 text-center font-bold bg-slate-200/60">Nilai Akhir</th>
-                    <th className="px-3 py-2 text-center">Predikat</th>
+                    <th className="px-3 py-2.5 text-center">No</th>
+                    <th className="px-3 py-2.5">Sesi / Juz</th>
+                    <th className="px-3 py-2.5 text-center text-red-600">SB (-1)</th>
+                    <th className="px-3 py-2.5 text-center text-amber-600">SK (-0.2)</th>
+                    <th className="px-3 py-2.5 text-center text-indigo-600">Tahsin</th>
+                    <th className="px-3 py-2.5 text-center font-bold">KBE</th>
+                    <th className="px-3 py-2.5 text-center font-black bg-slate-200/60">Nilai Akhir</th>
+                    <th className="px-3 py-2.5 text-center">Predikat</th>
+                    <th className="px-3 py-2.5 text-center">Aksi</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
@@ -867,6 +1113,16 @@ export const ExamScoringView: React.FC<ExamScoringViewProps> = ({
                       <td className="px-3 py-2 text-center font-bold text-[11px]">
                         {getPredikat(s.nilaiAkhirSoal)}
                       </td>
+                      <td className="px-3 py-2 text-center">
+                        <button
+                          type="button"
+                          onClick={() => setCurrentStep(idx + 1)}
+                          className="px-2 py-1 text-emerald-700 hover:bg-emerald-100 rounded text-[10px] font-bold transition flex items-center gap-1 mx-auto"
+                        >
+                          <Edit3 className="w-3 h-3" />
+                          <span>Edit</span>
+                        </button>
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -878,18 +1134,18 @@ export const ExamScoringView: React.FC<ExamScoringViewProps> = ({
               <button
                 type="button"
                 onClick={() => setCurrentStep(totalQuestions)}
-                className="w-full sm:w-auto px-5 py-2.5 rounded-xl border border-slate-300 text-slate-700 text-xs font-bold hover:bg-slate-100"
+                className="w-full sm:w-auto px-5 py-3 rounded-2xl border border-slate-300 text-slate-700 text-xs font-bold hover:bg-slate-100 active:scale-95"
               >
-                Kembali Edit Soal
+                Kembali Edit Soal Terakhir
               </button>
 
               <button
                 type="button"
                 onClick={handleFinalSubmit}
-                className="w-full sm:w-auto px-6 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-extrabold rounded-xl shadow-md hover:shadow-lg transition flex items-center justify-center gap-2"
+                className="w-full sm:w-auto px-7 py-3 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black rounded-2xl shadow-md hover:shadow-lg transition flex items-center justify-center gap-2 active:scale-95"
               >
                 <CheckCircle2 className="w-4 h-4" />
-                <span>Simpan Final ke Database</span>
+                <span>Simpan Final ke Database Terpadu</span>
               </button>
             </div>
           </div>

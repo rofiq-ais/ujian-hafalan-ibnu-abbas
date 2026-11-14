@@ -1,6 +1,20 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Marhalah, Kampus } from '../types';
-import { BookOpen, Users, FileText, BarChart3, School, UserCheck } from 'lucide-react';
+import {
+  BookOpen,
+  Users,
+  FileText,
+  BarChart3,
+  School,
+  Sparkles,
+  HelpCircle,
+  Menu,
+  X,
+  ChevronDown,
+  UserCheck,
+  SlidersHorizontal,
+  CheckCircle2
+} from 'lucide-react';
 import { PengujiItem } from '../services/api';
 
 interface NavbarProps {
@@ -13,6 +27,7 @@ interface NavbarProps {
   pengujiList?: PengujiItem[];
   activePengujiNama?: string;
   setActivePengujiNama?: (nama: string) => void;
+  onOpenRumus?: () => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -25,172 +40,450 @@ export const Navbar: React.FC<NavbarProps> = ({
   pengujiList = [],
   activePengujiNama,
   setActivePengujiNama,
+  onOpenRumus,
 }) => {
+  const [contextDrawerOpen, setContextDrawerOpen] = useState(false);
+
+  const navItems = [
+    { id: 'input', label: 'Input Nilai', icon: BookOpen, desc: 'Lembar Ujian Lisan' },
+    { id: 'rapor', label: 'Rapor Santri', icon: FileText, desc: 'Cetak & Bagikan Rapor' },
+    { id: 'rekap', label: 'Rekapitulasi', icon: BarChart3, desc: 'Rekap Nilai Masal' },
+    { id: 'master', label: 'Data Master', icon: Users, desc: 'Santri, Asatidz & Penguji' },
+  ] as const;
+
   return (
-    <header className="bg-white border-b border-slate-200 sticky top-0 z-30 shadow-xs no-print">
-      {/* Top Banner Context Switcher */}
-      <div className="bg-emerald-950 text-emerald-100 text-xs px-4 py-2 border-b border-emerald-900/40">
-        <div className="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-3">
-          <div className="flex items-center gap-2">
-            <span className="inline-flex items-center gap-1.5 font-semibold text-emerald-300">
-              <School className="w-3.5 h-3.5" />
-              Ma'had Ibnu Abbas
-            </span>
-            <span className="text-emerald-500">•</span>
-            <span className="text-emerald-300/80">T.A. 2026/2027 (Semester Ganjil)</span>
-          </div>
-
-          <div className="flex items-center gap-3">
-            {/* Switcher Marhalah */}
-            <div className="flex items-center bg-emerald-900/60 p-0.5 rounded-lg border border-emerald-800">
-              <button
-                type="button"
-                onClick={() => setMarhalah('MI')}
-                className={`px-2.5 py-1 rounded-md text-[11px] font-bold transition-all ${
-                  marhalah === 'MI'
-                    ? 'bg-emerald-500 text-white shadow-xs'
-                    : 'text-emerald-300 hover:text-white'
-                }`}
-              >
-                MI
-              </button>
-              <button
-                type="button"
-                onClick={() => setMarhalah('ULA_MTS')}
-                className={`px-2.5 py-1 rounded-md text-[11px] font-bold transition-all ${
-                  marhalah === 'ULA_MTS'
-                    ? 'bg-emerald-500 text-white shadow-xs'
-                    : 'text-emerald-300 hover:text-white'
-                }`}
-              >
-                Ula / MTs
-              </button>
+    <>
+      <header className="bg-white border-b border-slate-200/90 sticky top-0 z-30 shadow-xs no-print backdrop-blur-md bg-white/95">
+        {/* Top Islamic & Context Ribbon (Desktop View) */}
+        <div className="hidden md:block bg-gradient-to-r from-emerald-950 via-teal-950 to-emerald-950 text-emerald-100 text-xs px-4 py-2 border-b border-emerald-900/60">
+          <div className="max-w-7xl mx-auto flex items-center justify-between gap-4">
+            
+            {/* Left: Institution & Arabic Blessing */}
+            <div className="flex items-center gap-2.5">
+              <span className="inline-flex items-center gap-1.5 font-bold text-emerald-300">
+                <School className="w-3.5 h-3.5 text-emerald-400" />
+                <span className="tracking-tight">Ma'had Ibnu Abbas</span>
+              </span>
+              <span className="text-emerald-600">•</span>
+              <span className="text-emerald-300/80 font-serif tracking-wider text-[11px]">
+                بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ
+              </span>
+              <span className="text-emerald-600">•</span>
+              <span className="text-emerald-400/80 text-[11px]">
+                T.A. 2026/2027 (Ganjil)
+              </span>
             </div>
 
-            {/* Switcher Kampus */}
-            <div className="flex items-center bg-emerald-900/60 p-0.5 rounded-lg border border-emerald-800">
-              <button
-                type="button"
-                onClick={() => setKampus('BANIN')}
-                className={`px-2.5 py-1 rounded-md text-[11px] font-bold transition-all ${
-                  kampus === 'BANIN'
-                    ? 'bg-emerald-500 text-white shadow-xs'
-                    : 'text-emerald-300 hover:text-white'
-                }`}
-              >
-                Banin (Putra)
-              </button>
-              <button
-                type="button"
-                onClick={() => setKampus('BANAT')}
-                className={`px-2.5 py-1 rounded-md text-[11px] font-bold transition-all ${
-                  kampus === 'BANAT'
-                    ? 'bg-emerald-500 text-white shadow-xs'
-                    : 'text-emerald-300 hover:text-white'
-                }`}
-              >
-                Banat (Putri)
-              </button>
-            </div>
-
-            {/* Penguji Active Selector (Loaded from shared musyrif table!) */}
-            <div className="hidden sm:flex items-center gap-1.5 text-emerald-200 text-[11px] pl-2 border-l border-emerald-800">
-              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-              {pengujiList.length > 0 && setActivePengujiNama ? (
-                <select
-                  value={activePengujiNama}
-                  onChange={(e) => setActivePengujiNama(e.target.value)}
-                  className="bg-emerald-900 text-emerald-100 text-[11px] font-semibold rounded px-1.5 py-0.5 border border-emerald-700 focus:outline-none"
+            {/* Right: Quick Switchers & Help (Desktop) */}
+            <div className="flex items-center gap-3">
+              {/* Marhalah Switcher */}
+              <div className="flex items-center bg-emerald-900/80 p-0.5 rounded-lg border border-emerald-800/80">
+                <button
+                  type="button"
+                  onClick={() => setMarhalah('MI')}
+                  className={`px-2.5 py-1 rounded-md text-[11px] font-extrabold transition-all ${
+                    marhalah === 'MI'
+                      ? 'bg-emerald-500 text-white shadow-xs'
+                      : 'text-emerald-300 hover:text-white'
+                  }`}
+                  title="Madrasah Ibtidaiyah"
                 >
-                  {pengujiList.map(p => (
-                    <option key={p.id} value={p.nama}>
-                      {p.nama}
-                    </option>
-                  ))}
-                </select>
-              ) : (
-                <span className="font-medium">{activePengujiNama || 'Ust. Penguji'}</span>
-              )}
-              <span className="bg-emerald-800/80 px-1.5 py-0.5 rounded text-[10px] text-emerald-300 font-mono">Penguji</span>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Main Header & Nav Tabs */}
-      <div className="max-w-7xl mx-auto px-4">
-        <div className="flex flex-col md:flex-row md:items-center justify-between py-3 gap-3">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-600 to-teal-700 flex items-center justify-center text-white shadow-md shadow-emerald-700/20 font-bold text-lg">
-              IA
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h1 className="text-base font-extrabold text-slate-900 tracking-tight">
-                  Evaluasi Ujian Hafalan Al-Qur'an
-                </h1>
-                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">
-                  {marhalah === 'MI' ? 'Madrasah Ibtidaiyah' : 'Ula / MTs'} - Kampus {kampus === 'BANIN' ? 'Banin' : 'Banat'}
-                </span>
+                  MI
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setMarhalah('ULA_MTS')}
+                  className={`px-2.5 py-1 rounded-md text-[11px] font-extrabold transition-all ${
+                    marhalah === 'ULA_MTS'
+                      ? 'bg-emerald-500 text-white shadow-xs'
+                      : 'text-emerald-300 hover:text-white'
+                  }`}
+                  title="Ula / MTs"
+                >
+                  Ula / MTs
+                </button>
               </div>
-              <p className="text-xs text-slate-500">
-                Sistem Penilaian Ujian Tahfidz Terpadu Ma'had Ibnu Abbas
-              </p>
+
+              {/* Kampus Switcher */}
+              <div className="flex items-center bg-emerald-900/80 p-0.5 rounded-lg border border-emerald-800/80">
+                <button
+                  type="button"
+                  onClick={() => setKampus('BANIN')}
+                  className={`px-2.5 py-1 rounded-md text-[11px] font-extrabold transition-all ${
+                    kampus === 'BANIN'
+                      ? 'bg-emerald-500 text-white shadow-xs'
+                      : 'text-emerald-300 hover:text-white'
+                  }`}
+                  title="Kampus Banin (Putra)"
+                >
+                  Banin
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setKampus('BANAT')}
+                  className={`px-2.5 py-1 rounded-md text-[11px] font-extrabold transition-all ${
+                    kampus === 'BANAT'
+                      ? 'bg-emerald-500 text-white shadow-xs'
+                      : 'text-emerald-300 hover:text-white'
+                  }`}
+                  title="Kampus Banat (Putri)"
+                >
+                  Banat
+                </button>
+              </div>
+
+              {/* Help & Rumus Button */}
+              {onOpenRumus && (
+                <button
+                  type="button"
+                  onClick={onOpenRumus}
+                  className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-800/80 hover:bg-emerald-700 text-emerald-200 hover:text-white text-[11px] font-bold border border-emerald-700 transition"
+                  title="Buka Panduan & Rumus Penilaian Resmi"
+                >
+                  <HelpCircle className="w-3.5 h-3.5 text-emerald-300" />
+                  <span>Rumus & Panduan</span>
+                </button>
+              )}
             </div>
           </div>
-
-          {/* Navigation Buttons */}
-          <nav className="flex items-center gap-1 overflow-x-auto pb-1 md:pb-0">
-            <button
-              onClick={() => setActiveTab('input')}
-              className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap ${
-                activeTab === 'input'
-                  ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/20'
-                  : 'text-slate-600 hover:text-emerald-700 hover:bg-emerald-50'
-              }`}
-            >
-              <BookOpen className="w-4 h-4" />
-              Input Nilai Ujian
-            </button>
-
-            <button
-              onClick={() => setActiveTab('rapor')}
-              className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap ${
-                activeTab === 'rapor'
-                  ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/20'
-                  : 'text-slate-600 hover:text-emerald-700 hover:bg-emerald-50'
-              }`}
-            >
-              <FileText className="w-4 h-4" />
-              Rapor Santri
-            </button>
-
-            <button
-              onClick={() => setActiveTab('rekap')}
-              className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap ${
-                activeTab === 'rekap'
-                  ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/20'
-                  : 'text-slate-600 hover:text-emerald-700 hover:bg-emerald-50'
-              }`}
-            >
-              <BarChart3 className="w-4 h-4" />
-              Rekapitulasi Masal
-            </button>
-
-            <button
-              onClick={() => setActiveTab('master')}
-              className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap ${
-                activeTab === 'master'
-                  ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/20'
-                  : 'text-slate-600 hover:text-emerald-700 hover:bg-emerald-50'
-              }`}
-            >
-              <Users className="w-4 h-4" />
-              Data Santri
-            </button>
-          </nav>
         </div>
-      </div>
-    </header>
+
+        {/* Main Header */}
+        <div className="max-w-7xl mx-auto px-3 sm:px-4">
+          <div className="flex items-center justify-between py-2 sm:py-3 gap-2">
+            
+            {/* Logo & Application Title */}
+            <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
+              <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-2xl bg-gradient-to-br from-emerald-600 to-teal-700 flex items-center justify-center text-white shadow-md shadow-emerald-700/25 font-black text-base sm:text-lg tracking-tight shrink-0 border border-emerald-500/30">
+                IA
+              </div>
+              <div className="min-w-0">
+                <div className="flex items-center gap-1.5 sm:gap-2">
+                  <h1 className="text-xs sm:text-base font-extrabold text-slate-900 tracking-tight truncate">
+                    Evaluasi Ujian Hafalan
+                  </h1>
+
+                  {/* Clickable Mobile Context Pill: Opens the Drawer directly! */}
+                  <button
+                    type="button"
+                    onClick={() => setContextDrawerOpen(true)}
+                    className="md:hidden flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-black bg-emerald-100 text-emerald-800 border border-emerald-300/80 active:scale-95 transition"
+                    title="Ubah Marhalah, Kampus, atau Penguji"
+                  >
+                    <span>{marhalah === 'MI' ? 'MI' : 'Ula'} • {kampus === 'BANIN' ? 'Banin' : 'Banat'}</span>
+                    <ChevronDown className="w-3 h-3 text-emerald-700" />
+                  </button>
+
+                  {/* Desktop Context Badge */}
+                  <span className="hidden md:inline-block px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-emerald-100 text-emerald-800 border border-emerald-200/80 whitespace-nowrap">
+                    {marhalah === 'MI' ? 'Madrasah Ibtidaiyah' : 'Ula / MTs'} • {kampus === 'BANIN' ? 'Banin (Putra)' : 'Banat (Putri)'}
+                  </span>
+                </div>
+                <p className="text-[10px] sm:text-[11px] text-slate-500 truncate hidden xs:block">
+                  Ma'had Ibnu Abbas • Sistem Evaluasi Terpadu
+                </p>
+              </div>
+            </div>
+
+            {/* Desktop Navigation Tabs */}
+            <nav className="hidden md:flex items-center gap-1.5" aria-label="Menu Utama Desktop">
+              {navItems.map((item) => {
+                const Icon = item.icon;
+                const isActive = activeTab === item.id;
+                return (
+                  <button
+                    key={item.id}
+                    onClick={() => setActiveTab(item.id)}
+                    className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-extrabold transition-all relative ${
+                      isActive
+                        ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/25'
+                        : 'text-slate-600 hover:text-emerald-700 hover:bg-emerald-50/80'
+                    }`}
+                  >
+                    <Icon className="w-4 h-4 shrink-0" />
+                    <span>{item.label}</span>
+                  </button>
+                );
+              })}
+            </nav>
+
+            {/* Desktop Active Penguji Pill */}
+            <div className="hidden lg:flex items-center gap-2 pl-3 border-l border-slate-200">
+              <div className="text-right">
+                <span className="text-[10px] text-slate-400 font-bold uppercase block">Penguji Menyimak:</span>
+                {pengujiList.length > 0 && setActivePengujiNama ? (
+                  <select
+                    value={activePengujiNama}
+                    onChange={(e) => setActivePengujiNama(e.target.value)}
+                    className="bg-slate-50 hover:bg-white text-slate-800 text-xs font-black rounded-lg px-2 py-1 border border-slate-200 focus:outline-none focus:ring-1 focus:ring-emerald-500 cursor-pointer max-w-[160px] truncate"
+                  >
+                    {pengujiList.map(p => (
+                      <option key={p.id} value={p.nama}>
+                        {p.nama}
+                      </option>
+                    ))}
+                  </select>
+                ) : (
+                  <span className="text-xs font-bold text-slate-700 block truncate max-w-[150px]">
+                    {activePengujiNama || 'Ust. Penguji'}
+                  </span>
+                )}
+              </div>
+            </div>
+
+            {/* Mobile Header Right Action: Rumus & Panduan Cepat */}
+            <div className="flex md:hidden items-center gap-1.5">
+              {onOpenRumus && (
+                <button
+                  type="button"
+                  onClick={onOpenRumus}
+                  className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-emerald-50 text-emerald-800 border border-emerald-200 active:scale-95 transition text-xs font-bold"
+                  title="Buka panduan rumus & kalkulator"
+                  aria-label="Buka panduan rumus"
+                >
+                  <HelpCircle className="w-3.5 h-3.5 text-emerald-600" />
+                  <span className="text-[11px] font-extrabold">Rumus</span>
+                </button>
+              )}
+            </div>
+
+          </div>
+        </div>
+      </header>
+
+      {/* Mobile Context / Settings Drawer (MODAL SHEET) - PLACED OUTSIDE <header> TO AVOID BACKDROP-FILTER CONTAINING BLOCK TRAP */}
+      {contextDrawerOpen && (
+        <div 
+          className="md:hidden fixed inset-0 z-[60] bg-slate-950/70 backdrop-blur-sm flex flex-col justify-end sm:justify-center sm:items-center p-0 sm:p-4 animate-in fade-in duration-200"
+          onClick={() => setContextDrawerOpen(false)}
+        >
+          <div
+            className="bg-white rounded-t-[28px] sm:rounded-3xl max-w-lg w-full max-h-[85dvh] flex flex-col shadow-2xl border-t sm:border border-slate-200 mx-auto overflow-hidden animate-in slide-in-from-bottom duration-250"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* iOS Drag Handle */}
+            <div className="w-12 h-1.5 bg-slate-300 rounded-full mx-auto my-3 sm:hidden shrink-0" />
+
+            {/* Drawer Header */}
+            <div className="flex items-center justify-between px-5 py-3 border-b border-slate-100 shrink-0">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-emerald-100 text-emerald-800 flex items-center justify-center font-bold">
+                  <SlidersHorizontal className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-black text-slate-900">Pengaturan Sesi Ujian</h3>
+                  <p className="text-[10px] text-slate-500">Pilih Penguji, Marhalah, dan Kampus</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setContextDrawerOpen(false)}
+                className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 flex items-center justify-center font-bold text-xs active:scale-95"
+                aria-label="Tutup pengaturan sesi"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Scrollable Body Content */}
+            <div className="p-5 space-y-5 overflow-y-auto flex-1 text-slate-800">
+              {/* 1. Penguji yang Menyimak */}
+              <div className="space-y-1.5">
+                <label className="block text-[11px] font-black text-emerald-950 uppercase tracking-wider">
+                  👤 Asatidz / Penguji yang Menyimak:
+                </label>
+                <div className="p-3.5 bg-emerald-50/70 rounded-2xl border border-emerald-200 space-y-2">
+                  <p className="text-[10px] text-emerald-800">
+                    Nilai ujian santri akan resmi tercatat disimak oleh penguji terpilih:
+                  </p>
+                  {pengujiList.length > 0 && setActivePengujiNama ? (
+                    <select
+                      value={activePengujiNama}
+                      onChange={(e) => setActivePengujiNama(e.target.value)}
+                      className="w-full bg-white text-slate-900 text-xs font-black rounded-xl p-2.5 border border-emerald-300 focus:outline-none focus:ring-2 focus:ring-emerald-500 shadow-2xs"
+                    >
+                      {pengujiList.map(p => (
+                        <option key={p.id} value={p.nama}>
+                          {p.nama} {p.tipeAsal ? `(${p.tipeAsal})` : ''}
+                        </option>
+                      ))}
+                    </select>
+                  ) : (
+                    <div className="bg-white p-2.5 rounded-xl border border-emerald-300 text-xs font-bold text-slate-800">
+                      {activePengujiNama || 'Ust. Penguji'}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* 2. Pindah Marhalah (Jenjang) */}
+              <div className="space-y-1.5">
+                <label className="block text-[11px] font-black text-slate-700 uppercase tracking-wider">
+                  🏫 Pindah Marhalah (Jenjang):
+                </label>
+                <div className="grid grid-cols-2 gap-2.5">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setMarhalah('MI');
+                    }}
+                    className={`p-3.5 rounded-2xl border-2 text-left transition-all ${
+                      marhalah === 'MI'
+                        ? 'border-emerald-600 bg-emerald-50 text-emerald-950 font-black shadow-xs'
+                        : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300 font-bold'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs">Madrasah Ibtidaiyah</span>
+                      {marhalah === 'MI' && <CheckCircle2 className="w-4 h-4 text-emerald-600" />}
+                    </div>
+                    <span className="text-[10px] block opacity-70 mt-0.5">Jenjang MI</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setMarhalah('ULA_MTS');
+                    }}
+                    className={`p-3.5 rounded-2xl border-2 text-left transition-all ${
+                      marhalah === 'ULA_MTS'
+                        ? 'border-emerald-600 bg-emerald-50 text-emerald-950 font-black shadow-xs'
+                        : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300 font-bold'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs">Ula / MTs</span>
+                      {marhalah === 'ULA_MTS' && <CheckCircle2 className="w-4 h-4 text-emerald-600" />}
+                    </div>
+                    <span className="text-[10px] block opacity-70 mt-0.5">Tingkat Tsanawiyah</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* 3. Pindah Gender / Kampus */}
+              <div className="space-y-1.5">
+                <label className="block text-[11px] font-black text-slate-700 uppercase tracking-wider">
+                  🕌 Pindah Kampus & Gender:
+                </label>
+                <div className="grid grid-cols-2 gap-2.5">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setKampus('BANIN');
+                    }}
+                    className={`p-3.5 rounded-2xl border-2 text-left transition-all ${
+                      kampus === 'BANIN'
+                        ? 'border-blue-600 bg-blue-50 text-blue-950 font-black shadow-xs'
+                        : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300 font-bold'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs">Banin (Putra)</span>
+                      {kampus === 'BANIN' && <CheckCircle2 className="w-4 h-4 text-blue-600" />}
+                    </div>
+                    <span className="text-[10px] block opacity-70 mt-0.5">Santri Putra</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setKampus('BANAT');
+                    }}
+                    className={`p-3.5 rounded-2xl border-2 text-left transition-all ${
+                      kampus === 'BANAT'
+                        ? 'border-pink-500 bg-pink-50 text-pink-950 font-black shadow-xs'
+                        : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300 font-bold'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs">Banat (Putri)</span>
+                      {kampus === 'BANAT' && <CheckCircle2 className="w-4 h-4 text-pink-600" />}
+                    </div>
+                    <span className="text-[10px] block opacity-70 mt-0.5">Santri Putri</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* 4. Quick Access Rumus Penilaian */}
+              {onOpenRumus && (
+                <div className="pt-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setContextDrawerOpen(false);
+                      onOpenRumus();
+                    }}
+                    className="w-full py-2.5 px-3 bg-emerald-50 hover:bg-emerald-100 text-emerald-900 rounded-xl text-xs font-black border border-emerald-200 flex items-center justify-center gap-2 transition active:scale-95"
+                  >
+                    <HelpCircle className="w-4 h-4 text-emerald-700" />
+                    <span>Buka Panduan & Rumus Penilaian</span>
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {/* Sticky Drawer Footer */}
+            <div className="p-4 bg-slate-50 border-t border-slate-200 shrink-0">
+              <button
+                type="button"
+                onClick={() => setContextDrawerOpen(false)}
+                className="w-full py-3.5 bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs rounded-2xl shadow-sm transition active:scale-95 flex items-center justify-center gap-2"
+              >
+                <span>Terapkan & Tutup</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Floating Modern Mobile Bottom Navigation Bar (4 Tab Utama + 1 Tombol Sesi Penguji/Marhalah/Gender) */}
+      <nav
+        className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-slate-200/90 shadow-lg px-1.5 py-1.5 flex items-center justify-around no-print"
+        aria-label="Navigasi Bawah Ponsel"
+      >
+        {navItems.map((item) => {
+          const Icon = item.icon;
+          const isActive = activeTab === item.id;
+          return (
+            <button
+              key={item.id}
+              onClick={() => setActiveTab(item.id)}
+              className={`flex flex-col items-center justify-center py-1 px-2 rounded-xl transition-all min-w-[56px] ${
+                isActive
+                  ? 'text-emerald-700 font-extrabold'
+                  : 'text-slate-500 font-medium hover:text-slate-800'
+              }`}
+            >
+              <div className={`p-1 rounded-lg transition-all ${
+                isActive ? 'bg-emerald-100 text-emerald-800 scale-110' : 'text-slate-500'
+              }`}>
+                <Icon className="w-5 h-5" />
+              </div>
+              <span className="text-[10px] mt-0.5 tracking-tight truncate max-w-[62px]">{item.label}</span>
+            </button>
+          );
+        })}
+
+        {/* 5. Tombol Sesi (Penguji, Marhalah, Gender) - Membuka Bottom Sheet langsung dari posisi jempol! */}
+        <button
+          type="button"
+          onClick={() => setContextDrawerOpen(true)}
+          className={`flex flex-col items-center justify-center py-1 px-2 rounded-xl transition-all min-w-[56px] relative active:scale-95 ${
+            contextDrawerOpen
+              ? 'text-emerald-700 font-extrabold'
+              : 'text-slate-500 font-medium hover:text-slate-800'
+          }`}
+          title="Pengaturan Sesi (Penguji, Marhalah, Gender)"
+        >
+          <div className={`p-1 rounded-lg transition-all ${
+            contextDrawerOpen ? 'bg-emerald-100 text-emerald-800 scale-110' : 'text-slate-500'
+          }`}>
+            <SlidersHorizontal className="w-5 h-5 text-emerald-700" />
+          </div>
+          <span className="text-[10px] mt-0.5 tracking-tight font-extrabold text-emerald-800">Sesi</span>
+          <span className="absolute top-1 right-2.5 w-2 h-2 rounded-full bg-emerald-500 ring-2 ring-white"></span>
+        </button>
+      </nav>
+    </>
   );
 };

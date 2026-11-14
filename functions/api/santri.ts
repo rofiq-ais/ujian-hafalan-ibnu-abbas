@@ -1,5 +1,7 @@
 import { getDb, jsonResponse, errorResponse, Env } from './_db';
 
+export { onRequestOptions } from './_db';
+
 export const onRequestGet: PagesFunction<Env> = async ({ request, env }) => {
   try {
     const url = new URL(request.url);

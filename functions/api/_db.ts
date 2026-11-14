@@ -5,10 +5,12 @@ export interface Env {
 }
 
 export function getDb(env?: Env) {
-  const url = env?.DATABASE_URL || process.env.DATABASE_URL;
+  let url = env?.DATABASE_URL || (typeof process !== 'undefined' ? process.env?.DATABASE_URL : undefined);
   if (!url) {
-    throw new Error('DATABASE_URL environment variable is missing.');
+    throw new Error('DATABASE_URL belum terpasang di Cloudflare Pages Environment Variables. Silakan atur DATABASE_URL di Settings > Variables and Secrets lalu klik Redeploy.');
   }
+  // Bersihkan kutip ganda atau spasi yang tidak sengaja terbawa saat copy-paste
+  url = url.trim().replace(/^["']|["']$/g, '');
   return neon(url);
 }
 
@@ -27,6 +29,17 @@ export function jsonResponse(data: unknown, status = 200) {
 export function errorResponse(message: string, status = 400) {
   return jsonResponse({ error: message }, status);
 }
+
+export const onRequestOptions: PagesFunction = async () => {
+  return new Response(null, {
+    status: 204,
+    headers: {
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+    },
+  });
+};
 
 /**
  * Migration & Sanity DDL for Tahfidz System

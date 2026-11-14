@@ -26,6 +26,27 @@ export interface PengajarItem {
   isActive: boolean;
 }
 
+async function handleResponse<T>(res: Response, defaultError: string): Promise<T> {
+  if (!res.ok) {
+    let msg = defaultError;
+    try {
+      const data = await res.json();
+      if (data && data.error) {
+        msg = data.error;
+      }
+    } catch {
+      try {
+        const text = await res.text();
+        if (text) msg = text.slice(0, 200);
+      } catch {
+        // ignore
+      }
+    }
+    throw new Error(msg);
+  }
+  return await res.json();
+}
+
 export const api = {
   // 1. Data Santri
   async getSantri(marhalah?: Marhalah, kampus?: Kampus): Promise<Santri[]> {
@@ -35,8 +56,7 @@ export const api = {
       if (kampus) params.append('kampus', kampus);
 
       const res = await fetch(`/api/santri?${params.toString()}`);
-      if (!res.ok) throw new Error('Failed to fetch santri');
-      const data = await res.json();
+      const data = await handleResponse<{ santri: Santri[] }>(res, 'Gagal mengambil data santri');
       return data.santri || [];
     } catch (err) {
       console.warn('API getSantri error, using local fallback:', err);
@@ -55,8 +75,7 @@ export const api = {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(items),
       });
-      if (!res.ok) throw new Error('Failed to save santri');
-      return await res.json();
+      return await handleResponse<{ success: boolean; count?: number }>(res, 'Gagal menyimpan data santri');
     } catch (err) {
       console.error('API saveSantri error:', err);
       throw err;
@@ -71,8 +90,7 @@ export const api = {
       if (marhalah) params.append('marhalah', marhalah);
 
       const res = await fetch(`/api/pengajar?${params.toString()}`);
-      if (!res.ok) throw new Error('Failed to fetch pengajar');
-      const data = await res.json();
+      const data = await handleResponse<{ pengajar: PengajarItem[] }>(res, 'Gagal mengambil data pengajar');
       return data.pengajar || [];
     } catch (err) {
       console.warn('API getPengajar error:', err);
@@ -87,8 +105,7 @@ export const api = {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data),
       });
-      if (!res.ok) throw new Error('Failed to save pengajar');
-      return await res.json();
+      return await handleResponse<{ success: boolean; id?: string }>(res, 'Gagal menyimpan data pengajar');
     } catch (err) {
       console.error('API savePengajar error:', err);
       throw err;
@@ -103,8 +120,7 @@ export const api = {
       if (marhalah) params.append('marhalah', marhalah);
 
       const res = await fetch(`/api/penguji?${params.toString()}`);
-      if (!res.ok) throw new Error('Failed to fetch penguji');
-      const data = await res.json();
+      const data = await handleResponse<{ penguji: PengujiItem[] }>(res, 'Gagal mengambil daftar penguji');
       return data.penguji || [];
     } catch (err) {
       console.warn('API getPenguji error, using fallback:', err);
@@ -118,8 +134,7 @@ export const api = {
   async getKandidatPenguji(): Promise<PengujiItem[]> {
     try {
       const res = await fetch('/api/penguji?forSettings=true');
-      if (!res.ok) throw new Error('Failed to fetch candidates');
-      const data = await res.json();
+      const data = await handleResponse<{ kandidat: PengujiItem[] }>(res, 'Gagal mengambil kandidat penguji');
       return data.kandidat || [];
     } catch (err) {
       console.warn('API getKandidatPenguji error:', err);
@@ -141,8 +156,7 @@ export const api = {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(item),
       });
-      if (!res.ok) throw new Error('Failed to update penguji status');
-      return await res.json();
+      return await handleResponse<{ success: boolean; message: string }>(res, 'Gagal memperbarui status penguji');
     } catch (err) {
       console.error('API setPengujiStatus error:', err);
       throw err;
@@ -159,8 +173,7 @@ export const api = {
       if (jenisUjian) params.append('jenisUjian', jenisUjian);
 
       const res = await fetch(`/api/penilaian?${params.toString()}`);
-      if (!res.ok) throw new Error('Failed to fetch penilaian');
-      const data = await res.json();
+      const data = await handleResponse<{ penilaian: PenilaianRecord[] }>(res, 'Gagal mengambil riwayat penilaian');
       return data.penilaian || [];
     } catch (err) {
       console.warn('API getPenilaian error, using local fallback:', err);
@@ -175,8 +188,7 @@ export const api = {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(record),
       });
-      if (!res.ok) throw new Error('Failed to save penilaian');
-      return await res.json();
+      return await handleResponse<{ success: boolean; id: string; message: string }>(res, 'Gagal menyimpan penilaian');
     } catch (err) {
       console.error('API savePenilaian error:', err);
       throw err;

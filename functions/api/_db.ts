@@ -77,8 +77,7 @@ export async function ensureTahfidzTables(sql: any) {
         phone VARCHAR(32),
         gender VARCHAR(16) NOT NULL DEFAULT 'IKHWAN', -- 'IKHWAN' (Banin), 'AKHWAT' (Banat)
         kampus VARCHAR(32) NOT NULL DEFAULT 'BANIN',   -- 'BANIN', 'BANAT'
-        marhalah VARCHAR(32) NOT NULL DEFAULT 'SEMUA', -- 'MI', 'ULA_MTS', 'SEMUA'
-        mapel VARCHAR(128) DEFAULT 'Tahfidz Al-Qur''an',
+        mapel VARCHAR(128) DEFAULT 'Tahfidz Al-Quran',
         is_active BOOLEAN DEFAULT true,
         created_at TIMESTAMP WITHOUT TIME ZONE DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP WITHOUT TIME ZONE DEFAULT CURRENT_TIMESTAMP
@@ -177,6 +176,7 @@ export async function ensureTahfidzTables(sql: any) {
         await sql`
           INSERT INTO santri (id, nisn, nama, marhalah, kampus, kelas, halaqah, target_juz)
           VALUES (${s.id}, ${s.nisn}, ${s.nama}, ${s.marhalah}, ${s.kampus}, ${s.kelas}, ${s.halaqah}, ${s.target_juz})
+          ON CONFLICT (id) DO NOTHING
         `;
       }
     }

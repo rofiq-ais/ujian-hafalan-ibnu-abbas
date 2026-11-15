@@ -417,53 +417,66 @@ _Semoga ananda senantiasa istiqomah dalam menjaga dan mengamalkan kalamullah. Ba
             </div>
 
             {/* A. TAMPILAN RESMI TABEL (Desktop & Print Selalu Ditampilkan, di HP jika showMobileTableMode = true) */}
-            <div className={`${showMobileTableMode ? 'block' : 'hidden sm:block'} print:block overflow-x-auto rounded-2xl border border-slate-200`}>
-              <table className="w-full text-xs text-left border-collapse">
-                <thead className="bg-slate-100 text-slate-800 uppercase font-black border-b border-slate-200 print:bg-slate-100">
-                  <tr>
-                    <th className="px-2.5 py-2 text-center border-r border-slate-200 w-10">No</th>
-                    <th className="px-3 py-2 border-r border-slate-200">Keterangan / Juz</th>
-                    <th className="px-2.5 py-2 text-center text-red-600 border-r border-slate-200 whitespace-nowrap">SB (-1.0)</th>
-                    <th className="px-2.5 py-2 text-center text-amber-600 border-r border-slate-200 whitespace-nowrap">SK (-0.2)</th>
-                    <th className="px-2.5 py-2 text-center text-indigo-600 border-r border-slate-200 whitespace-nowrap">Tahsin</th>
-                    <th className="px-2.5 py-2 text-center border-r border-slate-200">KBE</th>
-                    <th className="px-3 py-2 text-center font-black bg-slate-200/60 border-r border-slate-200 whitespace-nowrap">
-                      Nilai Akhir
-                    </th>
-                    <th className="px-3 py-2 text-center">Predikat</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
-                  {activeRecord.soal.map((s, idx) => (
-                    <tr key={s.nomorSoal} className="hover:bg-slate-50">
-                      <td className="px-2.5 py-2 text-center font-bold text-slate-500 border-r border-slate-200">
-                        {idx + 1}
-                      </td>
-                      <td className="px-3 py-2 font-medium text-slate-800 border-r border-slate-200">
-                        Soal {idx + 1} {s.juzLabel ? `(${s.juzLabel})` : ''}
-                      </td>
-                      <td className="px-2.5 py-2 text-center font-mono text-red-600 font-bold border-r border-slate-200">
-                        {s.sb}
-                      </td>
-                      <td className="px-2.5 py-2 text-center font-mono text-amber-600 font-bold border-r border-slate-200">
-                        {s.sk}
-                      </td>
-                      <td className="px-2.5 py-2 text-center font-mono text-indigo-600 font-bold border-r border-slate-200">
-                        {s.tahsin}
-                      </td>
-                      <td className="px-2.5 py-2 text-center font-mono text-slate-600 border-r border-slate-200">
-                        {s.kbe.toFixed(2)}
-                      </td>
-                      <td className="px-3 py-2 text-center font-mono font-black text-slate-900 bg-slate-50 border-r border-slate-200">
-                        {s.nilaiAkhirSoal.toFixed(1)}
-                      </td>
-                      <td className="px-3 py-2 text-center font-bold text-[10px] uppercase text-slate-700">
-                        {getPredikat(s.nilaiAkhirSoal)}
-                      </td>
+            <div className={`${showMobileTableMode ? 'block' : 'hidden sm:block'} print:block space-y-1.5`}>
+              {showMobileTableMode && (
+                <div className="sm:hidden text-[10px] text-slate-500 font-medium flex items-center gap-1 px-1">
+                  <span>↔</span>
+                  <span>Geser ke samping untuk melihat seluruh kolom tabel</span>
+                </div>
+              )}
+              <div 
+                tabIndex={0}
+                role="region"
+                aria-label="Tabel Rincian Soal Rapor"
+                className="overflow-x-auto rounded-2xl border border-slate-200 shadow-2xs focus:outline-none focus:ring-1 focus:ring-emerald-500"
+              >
+                <table className="w-full min-w-[560px] text-xs text-left border-collapse">
+                  <thead className="bg-slate-100 text-slate-800 uppercase font-black border-b border-slate-200 print:bg-slate-100">
+                    <tr>
+                      <th className="px-2.5 py-2.5 text-center border-r border-slate-200 w-10">No</th>
+                      <th className="px-3.5 py-2.5 border-r border-slate-200">Keterangan / Juz</th>
+                      <th className="px-2.5 py-2.5 text-center text-red-600 border-r border-slate-200 whitespace-nowrap">SB (-1.0)</th>
+                      <th className="px-2.5 py-2.5 text-center text-amber-600 border-r border-slate-200 whitespace-nowrap">SK (-0.2)</th>
+                      <th className="px-2.5 py-2.5 text-center text-indigo-600 border-r border-slate-200 whitespace-nowrap">Tahsin</th>
+                      <th className="px-2.5 py-2.5 text-center border-r border-slate-200">KBE</th>
+                      <th className="px-3.5 py-2.5 text-center font-black bg-slate-200/60 border-r border-slate-200 whitespace-nowrap">
+                        Nilai Akhir
+                      </th>
+                      <th className="px-3 py-2.5 text-center">Predikat</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {activeRecord.soal.map((s, idx) => (
+                      <tr key={s.nomorSoal} className="hover:bg-slate-50 transition">
+                        <td className="px-2.5 py-2 text-center font-bold text-slate-500 border-r border-slate-200">
+                          {idx + 1}
+                        </td>
+                        <td className="px-3.5 py-2 font-semibold text-slate-800 border-r border-slate-200">
+                          Soal {idx + 1} {s.juzLabel ? `(${s.juzLabel})` : ''}
+                        </td>
+                        <td className="px-2.5 py-2 text-center font-mono text-red-600 font-bold border-r border-slate-200">
+                          {s.sb}
+                        </td>
+                        <td className="px-2.5 py-2 text-center font-mono text-amber-600 font-bold border-r border-slate-200">
+                          {s.sk}
+                        </td>
+                        <td className="px-2.5 py-2 text-center font-mono text-indigo-600 font-bold border-r border-slate-200">
+                          {s.tahsin}
+                        </td>
+                        <td className="px-2.5 py-2 text-center font-mono text-slate-600 border-r border-slate-200">
+                          {s.kbe.toFixed(2)}
+                        </td>
+                        <td className="px-3.5 py-2 text-center font-mono font-black text-slate-900 bg-slate-50 border-r border-slate-200">
+                          {s.nilaiAkhirSoal.toFixed(1)}
+                        </td>
+                        <td className="px-3 py-2 text-center font-bold text-[10px] uppercase text-slate-700">
+                          {getPredikat(s.nilaiAkhirSoal)}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
 
             {/* B. TAMPILAN KARTU BUTIR SOAL DI MOBILE (Sangat rapi, ramah jempol, tidak gepeng) */}

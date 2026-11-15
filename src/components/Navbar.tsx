@@ -282,15 +282,15 @@ export const Navbar: React.FC<NavbarProps> = ({
             </div>
 
             {/* Mobile Header Right Action: Sync Status & Rumus */}
-            <div className="flex md:hidden items-center gap-1.5">
+            <div className="flex md:hidden items-center gap-1.5 shrink-0">
               {syncStatus && (
                 <>
                   {!syncStatus.isOnline ? (
                     <span
-                      className="flex items-center gap-1 px-2 py-1.5 rounded-xl bg-red-100 text-red-800 border border-red-200 text-[11px] font-black"
+                      className="flex items-center gap-1 px-2 py-1.5 rounded-xl bg-red-100 text-red-800 border border-red-200 text-[11px] font-black whitespace-nowrap shrink-0"
                       title="Perangkat sedang offline"
                     >
-                      <WifiOff className="w-3.5 h-3.5 text-red-600" />
+                      <WifiOff className="w-3.5 h-3.5 text-red-600 shrink-0" />
                       <span>Offline</span>
                       {syncStatus.pendingCount > 0 && (
                         <span className="px-1.5 py-0.2 bg-red-600 text-white rounded-full text-[9px] font-mono">
@@ -299,22 +299,22 @@ export const Navbar: React.FC<NavbarProps> = ({
                       )}
                     </span>
                   ) : syncStatus.isSyncing ? (
-                    <span className="flex items-center gap-1 px-2 py-1.5 rounded-xl bg-teal-100 text-teal-800 border border-teal-200 text-[11px] font-black">
-                      <RefreshCw className="w-3.5 h-3.5 animate-spin text-teal-600" />
+                    <span className="flex items-center gap-1 px-2 py-1.5 rounded-xl bg-teal-100 text-teal-800 border border-teal-200 text-[11px] font-black whitespace-nowrap shrink-0">
+                      <RefreshCw className="w-3.5 h-3.5 animate-spin text-teal-600 shrink-0" />
                       <span>Sync</span>
                     </span>
                   ) : syncStatus.pendingCount > 0 ? (
                     <button
                       type="button"
                       onClick={() => syncStatus.onSyncNow && syncStatus.onSyncNow()}
-                      className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-amber-500 text-amber-950 text-[11px] font-black shadow-xs active:scale-95 transition"
+                      className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-amber-500 text-amber-950 text-[11px] font-black shadow-xs active:scale-95 transition whitespace-nowrap shrink-0"
                       title="Klik untuk menyinkronkan data offline"
                     >
-                      <CloudUpload className="w-3.5 h-3.5" />
+                      <CloudUpload className="w-3.5 h-3.5 shrink-0" />
                       <span>Sync ({syncStatus.pendingCount})</span>
                     </button>
                   ) : (
-                    <span className="flex items-center gap-1 px-2 py-1.5 rounded-xl bg-emerald-50 text-emerald-800 border border-emerald-200 text-[11px] font-bold">
+                    <span className="flex items-center gap-1 px-2 py-1.5 rounded-xl bg-emerald-50 text-emerald-800 border border-emerald-200 text-[11px] font-bold whitespace-nowrap shrink-0">
                       <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
                       <span className="hidden xs:inline">Online</span>
                     </span>
@@ -326,12 +326,12 @@ export const Navbar: React.FC<NavbarProps> = ({
                 <button
                   type="button"
                   onClick={onOpenRumus}
-                  className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-emerald-50 text-emerald-800 border border-emerald-200 active:scale-95 transition text-xs font-bold"
+                  className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-emerald-50 text-emerald-800 border border-emerald-200 active:scale-95 transition text-xs font-bold whitespace-nowrap shrink-0"
                   title="Buka panduan rumus & kalkulator"
                   aria-label="Buka panduan rumus"
                 >
-                  <HelpCircle className="w-3.5 h-3.5 text-emerald-600" />
-                  <span className="text-[11px] font-extrabold">Rumus</span>
+                  <HelpCircle className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                  <span className="text-[11px] font-extrabold whitespace-nowrap">Rumus</span>
                 </button>
               )}
             </div>

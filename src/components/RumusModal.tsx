@@ -156,43 +156,54 @@ export const RumusModal: React.FC<RumusModalProps> = ({ isOpen, onClose }) => {
               Rentang Nilai & Predikat Resmi
             </h4>
 
-            <div className="overflow-x-auto rounded-xl border border-slate-200">
-              <table className="w-full text-xs text-left border-collapse">
-                <thead className="bg-slate-100 text-slate-700 uppercase font-bold border-b border-slate-200">
-                  <tr>
-                    <th className="px-3 py-2">Rentang Nilai</th>
-                    <th className="px-3 py-2">Predikat</th>
-                    <th className="px-3 py-2">Kategori Kelulusan</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
-                  <tr>
-                    <td className="px-3 py-2 font-mono font-bold">&gt; 80.0 — 100.0</td>
-                    <td className="px-3 py-2"><span className="px-2 py-0.5 rounded font-bold bg-emerald-100 text-emerald-800">Sempurna</span></td>
-                    <td className="px-3 py-2 font-medium text-slate-600">Mumtaz / Istimewa</td>
-                  </tr>
-                  <tr>
-                    <td className="px-3 py-2 font-mono font-bold">70.1 — 80.0</td>
-                    <td className="px-3 py-2"><span className="px-2 py-0.5 rounded font-bold bg-teal-100 text-teal-800">Sangat Baik</span></td>
-                    <td className="px-3 py-2 font-medium text-slate-600">Jayyid Jiddan (Lulus Baik)</td>
-                  </tr>
-                  <tr>
-                    <td className="px-3 py-2 font-mono font-bold">60.1 — 70.0</td>
-                    <td className="px-3 py-2"><span className="px-2 py-0.5 rounded font-bold bg-blue-100 text-blue-800">Baik</span></td>
-                    <td className="px-3 py-2 font-medium text-slate-600">Jayyid (Lulus Bersyarat)</td>
-                  </tr>
-                  <tr>
-                    <td className="px-3 py-2 font-mono font-bold">50.1 — 60.0</td>
-                    <td className="px-3 py-2"><span className="px-2 py-0.5 rounded font-bold bg-amber-100 text-amber-800">Cukup</span></td>
-                    <td className="px-3 py-2 font-medium text-slate-600">Maqbul (Mengulang Sebagian)</td>
-                  </tr>
-                  <tr>
-                    <td className="px-3 py-2 font-mono font-bold">&le; 50.0</td>
-                    <td className="px-3 py-2"><span className="px-2 py-0.5 rounded font-bold bg-red-100 text-red-800">Gagal</span></td>
-                    <td className="px-3 py-2 font-medium text-slate-600">Rosib (Mengulang Penuh)</td>
-                  </tr>
-                </tbody>
-              </table>
+            <div className="space-y-1">
+              <div className="sm:hidden text-[10px] text-slate-500 font-medium flex items-center gap-1">
+                <span>↔</span>
+                <span>Geser ke samping untuk melihat seluruh keterangan predikat</span>
+              </div>
+              <div 
+                tabIndex={0}
+                role="region"
+                aria-label="Tabel Predikat Kelulusan"
+                className="overflow-x-auto rounded-xl border border-slate-200 shadow-2xs focus:outline-none focus:ring-1 focus:ring-emerald-500"
+              >
+                <table className="w-full min-w-[440px] text-xs text-left border-collapse">
+                  <thead className="bg-slate-100 text-slate-700 uppercase font-bold border-b border-slate-200">
+                    <tr>
+                      <th className="px-3 py-2 border-r border-slate-200 whitespace-nowrap">Rentang Nilai</th>
+                      <th className="px-3 py-2 border-r border-slate-200 whitespace-nowrap">Predikat</th>
+                      <th className="px-3 py-2 whitespace-nowrap">Kategori Kelulusan</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    <tr className="hover:bg-slate-50">
+                      <td className="px-3 py-2 font-mono font-bold border-r border-slate-200 whitespace-nowrap">&gt; 80.0 — 100.0</td>
+                      <td className="px-3 py-2 border-r border-slate-200 whitespace-nowrap"><span className="px-2 py-0.5 rounded font-bold bg-emerald-100 text-emerald-800">Sempurna</span></td>
+                      <td className="px-3 py-2 font-medium text-slate-700 whitespace-nowrap">Mumtaz / Istimewa</td>
+                    </tr>
+                    <tr className="hover:bg-slate-50">
+                      <td className="px-3 py-2 font-mono font-bold border-r border-slate-200 whitespace-nowrap">70.1 — 80.0</td>
+                      <td className="px-3 py-2 border-r border-slate-200 whitespace-nowrap"><span className="px-2 py-0.5 rounded font-bold bg-teal-100 text-teal-800">Sangat Baik</span></td>
+                      <td className="px-3 py-2 font-medium text-slate-700 whitespace-nowrap">Jayyid Jiddan (Lulus Baik)</td>
+                    </tr>
+                    <tr className="hover:bg-slate-50">
+                      <td className="px-3 py-2 font-mono font-bold border-r border-slate-200 whitespace-nowrap">60.1 — 70.0</td>
+                      <td className="px-3 py-2 border-r border-slate-200 whitespace-nowrap"><span className="px-2 py-0.5 rounded font-bold bg-blue-100 text-blue-800">Baik</span></td>
+                      <td className="px-3 py-2 font-medium text-slate-700 whitespace-nowrap">Jayyid (Lulus Bersyarat)</td>
+                    </tr>
+                    <tr className="hover:bg-slate-50">
+                      <td className="px-3 py-2 font-mono font-bold border-r border-slate-200 whitespace-nowrap">50.1 — 60.0</td>
+                      <td className="px-3 py-2 border-r border-slate-200 whitespace-nowrap"><span className="px-2 py-0.5 rounded font-bold bg-amber-100 text-amber-800">Cukup</span></td>
+                      <td className="px-3 py-2 font-medium text-slate-700 whitespace-nowrap">Maqbul (Mengulang Sebagian)</td>
+                    </tr>
+                    <tr className="hover:bg-slate-50">
+                      <td className="px-3 py-2 font-mono font-bold border-r border-slate-200 whitespace-nowrap">&le; 50.0</td>
+                      <td className="px-3 py-2 border-r border-slate-200 whitespace-nowrap"><span className="px-2 py-0.5 rounded font-bold bg-red-100 text-red-800">Gagal</span></td>
+                      <td className="px-3 py-2 font-medium text-slate-700 whitespace-nowrap">Rosib (Mengulang Penuh)</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
             </div>
           </div>
 

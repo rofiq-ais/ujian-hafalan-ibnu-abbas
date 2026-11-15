@@ -9,6 +9,19 @@ import { MasterRecapView } from './components/MasterRecapView';
 import { MasterDataView } from './components/MasterDataView';
 import { RumusModal } from './components/RumusModal';
 import { RefreshCw, CheckCircle2 } from 'lucide-react';
+import {
+  getCachedSantri,
+  setCachedSantri,
+  getCachedPenilaian,
+  setCachedPenilaian,
+  updateLocalPenilaianCache,
+  removeLocalPenilaianCache,
+  getCachedPenguji,
+  setCachedPenguji,
+  getSyncQueue,
+  addToSyncQueue,
+  processSyncQueue,
+} from './utils/offlineSync';
 
 export function App() {
   const [marhalah, setMarhalah] = useState<Marhalah>('ULA_MTS');
@@ -16,39 +29,104 @@ export function App() {
   const [activeTab, setActiveTab] = useState<'input' | 'rapor' | 'rekap' | 'master'>('input');
   const [showRumusModal, setShowRumusModal] = useState<boolean>(false);
 
-  const [santriList, setSantriList] = useState<Santri[]>(MOCK_SANTRI);
-  const [penilaianList, setPenilaianList] = useState<PenilaianRecord[]>(MOCK_PENILAIAN);
-  const [pengujiList, setPengujiList] = useState<PengujiItem[]>([]);
+  // Network & Offline Sync State
+  const [isOnline, setIsOnline] = useState<boolean>(() => {
+    return typeof window !== 'undefined' && typeof navigator !== 'undefined' ? navigator.onLine : true;
+  });
+  const [pendingSyncCount, setPendingSyncCount] = useState<number>(() => {
+    return getSyncQueue().length;
+  });
+  const [isSyncing, setIsSyncing] = useState<boolean>(false);
+
+  // Cache-first initial data
+  const [santriList, setSantriList] = useState<Santri[]>(() => {
+    const cached = getCachedSantri();
+    return cached.length > 0 ? cached : MOCK_SANTRI;
+  });
+  const [penilaianList, setPenilaianList] = useState<PenilaianRecord[]>(() => {
+    const cached = getCachedPenilaian();
+    return cached.length > 0 ? cached : MOCK_PENILAIAN;
+  });
+  const [pengujiList, setPengujiList] = useState<PengujiItem[]>(() => {
+    return getCachedPenguji();
+  });
   const [activePengujiNama, setActivePengujiNama] = useState<string>('Ust. Ahmad Fauzi, Lc.');
-  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [isLoading, setIsLoading] = useState<boolean>(false);
   const [targetEditExam, setTargetEditExam] = useState<{ santriId: string; jenisUjian: JenisUjian } | null>(null);
 
-  // Load initial data from Neon Postgres / local fallback
-  const loadData = async (targetKampus = kampus, targetMarhalah = marhalah) => {
-    setIsLoading(true);
+  // Manual & Auto Trigger Sync Queue
+  const handleSyncNow = async () => {
+    if (isSyncing || !navigator.onLine) return;
+    setIsSyncing(true);
     try {
-      const [santriData, penilaianData, pengujiData] = await Promise.all([
-        api.getSantri(),
-        api.getPenilaian(),
-        api.getPenguji(targetKampus, targetMarhalah),
-      ]);
+      const res = await processSyncQueue();
+      setPendingSyncCount(res.remaining);
+      if (res.processed > 0) {
+        // Muat ulang data terbaru dari database setelah antrean berhasil diunggah
+        await loadData(kampus, marhalah, false);
+      }
+    } catch (e) {
+      console.warn('Sync queue error:', e);
+    } finally {
+      setIsSyncing(false);
+    }
+  };
 
-      if (santriData && santriData.length > 0) {
-        setSantriList(santriData);
-      }
-      if (penilaianData && penilaianData.length > 0) {
-        setPenilaianList(penilaianData);
-      }
-      if (pengujiData && pengujiData.length > 0) {
-        setPengujiList(pengujiData);
-        if (!pengujiData.some(p => p.nama === activePengujiNama)) {
-          setActivePengujiNama(pengujiData[0].nama);
+  // Online / Offline Window Listeners
+  useEffect(() => {
+    const handleOnline = () => {
+      setIsOnline(true);
+      // Begitu koneksi pulih, sinkronkan otomatis antrean yang tertunda
+      handleSyncNow();
+    };
+
+    const handleOffline = () => {
+      setIsOnline(false);
+    };
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    // Refresh count on mount
+    setPendingSyncCount(getSyncQueue().length);
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
+
+  // Load data from Neon Postgres / sync to local cache
+  const loadData = async (targetKampus = kampus, targetMarhalah = marhalah, showLoading = true) => {
+    if (showLoading) setIsLoading(true);
+    try {
+      if (navigator.onLine) {
+        const [santriData, penilaianData, pengujiData] = await Promise.all([
+          api.getSantri(),
+          api.getPenilaian(),
+          api.getPenguji(targetKampus, targetMarhalah),
+        ]);
+
+        if (santriData && santriData.length > 0) {
+          setSantriList(santriData);
+          setCachedSantri(santriData);
+        }
+        if (penilaianData && penilaianData.length > 0) {
+          setPenilaianList(penilaianData);
+          setCachedPenilaian(penilaianData);
+        }
+        if (pengujiData && pengujiData.length > 0) {
+          setPengujiList(pengujiData);
+          setCachedPenguji(pengujiData);
+          if (!pengujiData.some(p => p.nama === activePengujiNama)) {
+            setActivePengujiNama(pengujiData[0].nama);
+          }
         }
       }
     } catch (err) {
-      console.warn('Fallback to local mock data:', err);
+      console.warn('Gagal koneksi ke server, menggunakan data offline cache lokal:', err);
     } finally {
-      setIsLoading(false);
+      if (showLoading) setIsLoading(false);
     }
   };
 
@@ -70,11 +148,23 @@ export function App() {
       return [record, ...prev];
     });
 
-    // 2. Persist to Neon DB
+    // 2. Simpan seketika ke cache offline lokal (Offline-First guarantee)
+    updateLocalPenilaianCache(record);
+
+    // 3. Jika sedang offline, masukkan langsung ke antrean sinkronisasi
+    if (!navigator.onLine) {
+      addToSyncQueue({ type: 'penilaian', action: 'save', payload: record });
+      setPendingSyncCount(getSyncQueue().length);
+      return;
+    }
+
+    // 4. Jika online, coba kirim ke Neon Postgres
     try {
       await api.savePenilaian(record);
     } catch (err) {
-      console.error('Failed to sync with Neon:', err);
+      console.warn('Gagal sinkron langsung ke server, dialihkan ke antrean offline:', err);
+      addToSyncQueue({ type: 'penilaian', action: 'save', payload: record });
+      setPendingSyncCount(getSyncQueue().length);
     }
   };
 
@@ -87,15 +177,24 @@ export function App() {
     if (!window.confirm(`Yakin ingin menghapus data nilai ujian ${record.jenisUjian} untuk ${record.namaSantri}?`)) {
       return;
     }
-    // Optimistic delete
+    // Optimistic delete di UI dan cache lokal
     setPenilaianList(prev => prev.filter(p => p.id !== record.id));
+    removeLocalPenilaianCache(record.id);
+
+    if (!navigator.onLine) {
+      addToSyncQueue({ type: 'penilaian', action: 'delete', payload: record });
+      setPendingSyncCount(getSyncQueue().length);
+      alert(`Data nilai ${record.namaSantri} dihapus dari perangkat (tersimpan dalam antrean sinkronisasi offline).`);
+      return;
+    }
 
     try {
       await api.deletePenilaian(record.id);
       alert(`Data nilai ujian ${record.namaSantri} berhasil dihapus.`);
     } catch (err: any) {
-      alert('Gagal menghapus penilaian: ' + err.message);
-      loadData();
+      console.warn('Gagal hapus di server, dimasukkan ke antrean offline:', err);
+      addToSyncQueue({ type: 'penilaian', action: 'delete', payload: record });
+      setPendingSyncCount(getSyncQueue().length);
     }
   };
 
@@ -105,7 +204,7 @@ export function App() {
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col selection:bg-emerald-200">
-      {/* Navbar with Campus & Unit context */}
+      {/* Navbar with Campus, Unit, and Offline/Sync Status */}
       <Navbar
         marhalah={marhalah}
         setMarhalah={setMarhalah}
@@ -117,6 +216,12 @@ export function App() {
         activePengujiNama={activePengujiNama}
         setActivePengujiNama={setActivePengujiNama}
         onOpenRumus={() => setShowRumusModal(true)}
+        syncStatus={{
+          isOnline,
+          pendingCount: pendingSyncCount,
+          isSyncing,
+          onSyncNow: handleSyncNow,
+        }}
       />
 
       {/* Main Content View with safe bottom padding for mobile navigation */}

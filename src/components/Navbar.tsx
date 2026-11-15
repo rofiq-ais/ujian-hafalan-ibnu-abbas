@@ -13,9 +13,20 @@ import {
   ChevronDown,
   UserCheck,
   SlidersHorizontal,
-  CheckCircle2
+  CheckCircle2,
+  Wifi,
+  WifiOff,
+  CloudUpload,
+  RefreshCw
 } from 'lucide-react';
 import { PengujiItem } from '../services/api';
+
+export interface SyncStatus {
+  isOnline: boolean;
+  pendingCount: number;
+  isSyncing: boolean;
+  onSyncNow?: () => Promise<void> | void;
+}
 
 interface NavbarProps {
   marhalah: Marhalah;
@@ -28,6 +39,7 @@ interface NavbarProps {
   activePengujiNama?: string;
   setActivePengujiNama?: (nama: string) => void;
   onOpenRumus?: () => void;
+  syncStatus?: SyncStatus;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -41,6 +53,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   activePengujiNama,
   setActivePengujiNama,
   onOpenRumus,
+  syncStatus,
 }) => {
   const [contextDrawerOpen, setContextDrawerOpen] = useState(false);
 
@@ -74,8 +87,45 @@ export const Navbar: React.FC<NavbarProps> = ({
               </span>
             </div>
 
-            {/* Right: Quick Switchers & Help (Desktop) */}
+            {/* Right: Quick Switchers, Sync Status & Help (Desktop) */}
             <div className="flex items-center gap-3">
+              {/* Sync / Offline Status Badge (Desktop) */}
+              {syncStatus && (
+                <div className="flex items-center">
+                  {!syncStatus.isOnline ? (
+                    <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-red-950/80 text-red-200 border border-red-700/80 text-[11px] font-bold">
+                      <WifiOff className="w-3.5 h-3.5 text-red-400" />
+                      <span>Mode Offline</span>
+                      {syncStatus.pendingCount > 0 && (
+                        <span className="ml-1 px-1.5 py-0.5 rounded-full bg-red-800 text-white font-mono text-[10px]">
+                          {syncStatus.pendingCount}
+                        </span>
+                      )}
+                    </span>
+                  ) : syncStatus.isSyncing ? (
+                    <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-teal-900/80 text-teal-200 border border-teal-700/80 text-[11px] font-bold">
+                      <RefreshCw className="w-3.5 h-3.5 animate-spin text-teal-300" />
+                      <span>Menyinkronkan...</span>
+                    </span>
+                  ) : syncStatus.pendingCount > 0 ? (
+                    <button
+                      type="button"
+                      onClick={() => syncStatus.onSyncNow && syncStatus.onSyncNow()}
+                      className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-amber-500 hover:bg-amber-600 text-amber-950 text-[11px] font-black transition active:scale-95 shadow-xs"
+                      title="Ada data offline yang belum tersinkron. Klik untuk sinkronkan sekarang."
+                    >
+                      <CloudUpload className="w-3.5 h-3.5" />
+                      <span>Sinkronkan ({syncStatus.pendingCount})</span>
+                    </button>
+                  ) : (
+                    <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-900/80 text-emerald-300 border border-emerald-800/80 text-[11px] font-bold">
+                      <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                      <span>Online • Tersinkron</span>
+                    </span>
+                  )}
+                </div>
+              )}
+
               {/* Marhalah Switcher */}
               <div className="flex items-center bg-emerald-900/80 p-0.5 rounded-lg border border-emerald-800/80">
                 <button
@@ -231,8 +281,47 @@ export const Navbar: React.FC<NavbarProps> = ({
               </div>
             </div>
 
-            {/* Mobile Header Right Action: Rumus & Panduan Cepat */}
+            {/* Mobile Header Right Action: Sync Status & Rumus */}
             <div className="flex md:hidden items-center gap-1.5">
+              {syncStatus && (
+                <>
+                  {!syncStatus.isOnline ? (
+                    <span
+                      className="flex items-center gap-1 px-2 py-1.5 rounded-xl bg-red-100 text-red-800 border border-red-200 text-[11px] font-black"
+                      title="Perangkat sedang offline"
+                    >
+                      <WifiOff className="w-3.5 h-3.5 text-red-600" />
+                      <span>Offline</span>
+                      {syncStatus.pendingCount > 0 && (
+                        <span className="px-1.5 py-0.2 bg-red-600 text-white rounded-full text-[9px] font-mono">
+                          {syncStatus.pendingCount}
+                        </span>
+                      )}
+                    </span>
+                  ) : syncStatus.isSyncing ? (
+                    <span className="flex items-center gap-1 px-2 py-1.5 rounded-xl bg-teal-100 text-teal-800 border border-teal-200 text-[11px] font-black">
+                      <RefreshCw className="w-3.5 h-3.5 animate-spin text-teal-600" />
+                      <span>Sync</span>
+                    </span>
+                  ) : syncStatus.pendingCount > 0 ? (
+                    <button
+                      type="button"
+                      onClick={() => syncStatus.onSyncNow && syncStatus.onSyncNow()}
+                      className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-amber-500 text-amber-950 text-[11px] font-black shadow-xs active:scale-95 transition"
+                      title="Klik untuk menyinkronkan data offline"
+                    >
+                      <CloudUpload className="w-3.5 h-3.5" />
+                      <span>Sync ({syncStatus.pendingCount})</span>
+                    </button>
+                  ) : (
+                    <span className="flex items-center gap-1 px-2 py-1.5 rounded-xl bg-emerald-50 text-emerald-800 border border-emerald-200 text-[11px] font-bold">
+                      <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
+                      <span className="hidden xs:inline">Online</span>
+                    </span>
+                  )}
+                </>
+              )}
+
               {onOpenRumus && (
                 <button
                   type="button"
@@ -403,6 +492,58 @@ export const Navbar: React.FC<NavbarProps> = ({
                   </button>
                 </div>
               </div>
+
+              {/* Status Koneksi & Sinkronisasi Database */}
+              {syncStatus && (
+                <div className="p-3.5 rounded-2xl border border-slate-200 bg-slate-50 space-y-2.5">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] font-black uppercase text-slate-700 tracking-wider">
+                      🌐 Status Sinkronisasi:
+                    </span>
+                    <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase ${
+                      !syncStatus.isOnline
+                        ? 'bg-red-100 text-red-800'
+                        : syncStatus.pendingCount > 0
+                        ? 'bg-amber-100 text-amber-900'
+                        : 'bg-emerald-100 text-emerald-800'
+                    }`}>
+                      <span className={`w-1.5 h-1.5 rounded-full ${
+                        !syncStatus.isOnline ? 'bg-red-500' : syncStatus.pendingCount > 0 ? 'bg-amber-500' : 'bg-emerald-500'
+                      }`} />
+                      {!syncStatus.isOnline ? 'Offline' : syncStatus.pendingCount > 0 ? `${syncStatus.pendingCount} Pending` : 'Tersinkron'}
+                    </span>
+                  </div>
+
+                  <p className="text-[10px] text-slate-500 leading-relaxed">
+                    {!syncStatus.isOnline
+                      ? 'Koneksi internet terputus. Penilaian tetap aman tersimpan offline di perangkat ini dan akan otomatis diunggah saat online kembali.'
+                      : syncStatus.pendingCount > 0
+                      ? `Terdapat ${syncStatus.pendingCount} penilaian offline yang menunggu diunggah ke Neon Postgres.`
+                      : 'Semua penilaian telah sinkron dengan database terpadu Neon Postgres.'}
+                  </p>
+
+                  {syncStatus.isOnline && syncStatus.pendingCount > 0 && (
+                    <button
+                      type="button"
+                      disabled={syncStatus.isSyncing}
+                      onClick={() => syncStatus.onSyncNow && syncStatus.onSyncNow()}
+                      className="w-full py-2 px-3 bg-amber-500 hover:bg-amber-600 text-amber-950 font-black text-xs rounded-xl transition flex items-center justify-center gap-2 active:scale-95 disabled:opacity-60 shadow-xs"
+                    >
+                      {syncStatus.isSyncing ? (
+                        <>
+                          <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                          <span>Menyinkronkan Antrean...</span>
+                        </>
+                      ) : (
+                        <>
+                          <CloudUpload className="w-3.5 h-3.5" />
+                          <span>Sinkronkan Sekarang ({syncStatus.pendingCount})</span>
+                        </>
+                      )}
+                    </button>
+                  )}
+                </div>
+              )}
 
               {/* 4. Quick Access Rumus Penilaian */}
               {onOpenRumus && (

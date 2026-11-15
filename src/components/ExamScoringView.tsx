@@ -24,6 +24,9 @@ import {
   User
 } from 'lucide-react';
 import { PengujiItem } from '../services/api';
+import { triggerHaptic } from '../utils/haptics';
+import { saveActiveExamDraft, getActiveExamDraft, clearActiveExamDraft } from '../utils/offlineSync';
+
 
 interface ExamScoringViewProps {
   marhalah: Marhalah;
@@ -120,9 +123,28 @@ export const ExamScoringView: React.FC<ExamScoringViewProps> = ({
     ) || null;
   }, [penilaianList, selectedSantriId, jenisUjian]);
 
+  // Active local draft state for UI banner & recovery
+  const activeDraft = useMemo(() => {
+    if (!selectedSantriId) return null;
+    return getActiveExamDraft(selectedSantriId, jenisUjian);
+  }, [selectedSantriId, jenisUjian, currentStep]);
+
   // When santri or exam type changes, check if there's an existing draft/record
   useEffect(() => {
     if (!selectedSantriId) return;
+
+    // Check localStorage draft first (prioritas jika ujian terputus di tengah jalan)
+    const draft = getActiveExamDraft(selectedSantriId, jenisUjian);
+    if (draft && Array.isArray(draft.soalList) && draft.soalList.length > 0) {
+      if (draft.selectedJuz && Array.isArray(draft.selectedJuz) && draft.selectedJuz.length > 0) {
+        setSelectedJuz(draft.selectedJuz);
+      }
+      if (draft.selectedPenguji) {
+        setSelectedPenguji(draft.selectedPenguji);
+      }
+      setSoalList(draft.soalList);
+      return;
+    }
 
     if (existingRecord) {
       if (existingRecord.jenisUjian === 'UAS' && existingRecord.selectedJuzList.length > 0) {
@@ -133,6 +155,19 @@ export const ExamScoringView: React.FC<ExamScoringViewProps> = ({
       initNewQuestions();
     }
   }, [selectedSantriId, jenisUjian, existingRecord]);
+
+  // Auto-save draft ke localStorage setiap ada perubahan nilai atau navigasi step
+  useEffect(() => {
+    if (!selectedSantriId || currentStep === 0 || soalList.length === 0) return;
+    saveActiveExamDraft(selectedSantriId, jenisUjian, {
+      santriId: selectedSantriId,
+      jenisUjian,
+      selectedJuz,
+      selectedPenguji,
+      soalList,
+      currentStep,
+    });
+  }, [selectedSantriId, jenisUjian, selectedJuz, selectedPenguji, soalList, currentStep]);
 
   const initNewQuestions = () => {
     const total = jenisUjian === 'UAS' ? Math.max(5, selectedJuz.length * 5) : 10;
@@ -162,6 +197,7 @@ export const ExamScoringView: React.FC<ExamScoringViewProps> = ({
   const handleJuzToggle = (juz: string) => {
     if (selectedJuz.includes(juz)) {
       if (selectedJuz.length === 1) {
+        triggerHaptic('warning');
         setToastMessage({
           title: 'Minimal 1 Juz',
           desc: 'Ujian UAS membutuhkan minimal 1 Juz hafalan.',
@@ -169,9 +205,11 @@ export const ExamScoringView: React.FC<ExamScoringViewProps> = ({
         });
         return;
       }
+      triggerHaptic('light');
       setSelectedJuz(selectedJuz.filter(j => j !== juz));
     } else {
       if (selectedJuz.length >= 10) {
+        triggerHaptic('warning');
         setToastMessage({
           title: 'Batas Maksimal',
           desc: 'Maksimal 10 Juz dalam satu siklus ujian (maksimal 50 butir soal).',
@@ -179,12 +217,14 @@ export const ExamScoringView: React.FC<ExamScoringViewProps> = ({
         });
         return;
       }
+      triggerHaptic('light');
       setSelectedJuz([...selectedJuz, juz]);
     }
   };
 
   // Quick preset shortcuts for Juz
   const handleJuzPreset = (type: 'juz30' | 'juz29_30' | 'juz28_30' | 'juz1_3') => {
+    triggerHaptic('light');
     if (type === 'juz30') setSelectedJuz(['Juz 30']);
     else if (type === 'juz29_30') setSelectedJuz(['Juz 30', 'Juz 29']);
     else if (type === 'juz28_30') setSelectedJuz(['Juz 30', 'Juz 29', 'Juz 28']);
@@ -193,24 +233,37 @@ export const ExamScoringView: React.FC<ExamScoringViewProps> = ({
 
   const handleStartExam = () => {
     if (!currentSantri) {
+      triggerHaptic('warning');
       setToastMessage({ title: 'Pilih Santri', desc: 'Silakan pilih santri yang akan diuji terlebih dahulu.', type: 'warning' });
       return;
     }
     if (jenisUjian === 'UAS' && selectedJuz.length === 0) {
+      triggerHaptic('warning');
       setToastMessage({ title: 'Pilih Juz', desc: 'Centang minimal 1 Juz yang akan diujikan.', type: 'warning' });
       return;
     }
 
+    triggerHaptic('light');
     const targetTotal = jenisUjian === 'UAS' ? selectedJuz.length * 5 : 10;
     if (soalList.length !== targetTotal) {
       initNewQuestions();
     }
 
-    setCurrentStep(1);
+    // Jika ada draf aktif dengan step > 0, lanjutkan ke step tersebut
+    if (activeDraft && typeof activeDraft.currentStep === 'number' && activeDraft.currentStep > 0) {
+      setCurrentStep(activeDraft.currentStep);
+    } else {
+      setCurrentStep(1);
+    }
   };
 
   // Adjust score for current question
   const updateScore = (index: number, field: 'sb' | 'sk' | 'tahsin', delta: number) => {
+    if (field === 'sb') {
+      triggerHaptic(delta > 0 ? 'medium' : 'light');
+    } else {
+      triggerHaptic('light');
+    }
     setSoalList(prev => {
       const next = [...prev];
       const cur = { ...next[index] };
@@ -236,6 +289,11 @@ export const ExamScoringView: React.FC<ExamScoringViewProps> = ({
 
   // Set direct preset score for current question
   const setQuickScorePreset = (index: number, type: 'mumtaz' | 'lancar_baik' | 'reset') => {
+    if (type === 'reset') {
+      triggerHaptic('heavy');
+    } else {
+      triggerHaptic('light');
+    }
     setSoalList(prev => {
       const next = [...prev];
       const cur = { ...next[index] };
@@ -298,6 +356,8 @@ export const ExamScoringView: React.FC<ExamScoringViewProps> = ({
     };
 
     onSavePenilaian(record);
+    clearActiveExamDraft(currentSantri.id, jenisUjian);
+    triggerHaptic('success');
     setToastMessage({
       title: 'Progress Cicilan Tersimpan!',
       desc: `Nilai hingga Soal ${currentStep} (${currentSoal?.juzLabel || 'UTS'}) aman tersimpan. Anda atau asatidz lain dapat melanjutkan kapan saja.`,
@@ -334,6 +394,8 @@ export const ExamScoringView: React.FC<ExamScoringViewProps> = ({
     };
 
     onSavePenilaian(record);
+    clearActiveExamDraft(currentSantri.id, jenisUjian);
+    triggerHaptic('success');
     setToastMessage({
       title: 'Alhamdulillah! Ujian Selesai',
       desc: `Seluruh penilaian ${currentSantri.nama} berhasil tersimpan ke sistem. Rata-rata akhir: ${agregat.rataRata} (${agregat.predikat}).`,
@@ -647,6 +709,54 @@ export const ExamScoringView: React.FC<ExamScoringViewProps> = ({
                   </div>
                 </div>
               )}
+
+              {/* Status Draf Ujian Berjalan Lokal (Offline Auto-Draft Protection) */}
+              {activeDraft && typeof activeDraft.currentStep === 'number' && activeDraft.currentStep > 0 && (
+                <div className="p-4 rounded-2xl bg-teal-50/95 border border-teal-300 flex items-start gap-3 text-xs text-teal-950 mt-2 shadow-2xs animate-fade-in">
+                  <Sparkles className="w-5 h-5 text-teal-600 shrink-0 mt-0.5" />
+                  <div className="flex-1 min-w-0">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <span className="font-extrabold text-xs sm:text-sm text-teal-950">
+                        Draf Ujian Berjalan Tersimpan di Perangkat Ini
+                      </span>
+                      <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-teal-200 text-teal-900 border border-teal-300">
+                        Soal {activeDraft.currentStep} Tersimpan
+                      </span>
+                    </div>
+                    <p className="mt-1 text-[11px] text-slate-700 leading-relaxed">
+                      Sesi ujian untuk <strong>{currentSantri?.nama}</strong> tersimpan aman di memori offline perangkat ini. Anda dapat melanjutkan pengujian tanpa mengulang dari awal.
+                    </p>
+                    <div className="mt-2.5 flex flex-wrap items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          triggerHaptic('light');
+                          setCurrentStep(activeDraft.currentStep);
+                        }}
+                        className="px-3.5 py-1.5 bg-teal-700 hover:bg-teal-800 text-white rounded-xl text-xs font-black shadow-xs active:scale-95 transition"
+                      >
+                        Lanjutkan dari Soal {activeDraft.currentStep}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          triggerHaptic('heavy');
+                          clearActiveExamDraft(selectedSantriId, jenisUjian);
+                          initNewQuestions();
+                          setToastMessage({
+                            title: 'Draf Dihapus',
+                            desc: 'Draf ujian lokal telah dibersihkan.',
+                            type: 'info'
+                          });
+                        }}
+                        className="px-3 py-1.5 bg-white hover:bg-red-50 text-red-600 border border-red-200 rounded-xl text-xs font-bold active:scale-95 transition"
+                      >
+                        Reset / Buang Draf
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* 4. Khusus UAS: Checklist Juz (Juz 1 s/d 30) */}
@@ -816,7 +926,10 @@ export const ExamScoringView: React.FC<ExamScoringViewProps> = ({
                     <button
                       key={num}
                       type="button"
-                      onClick={() => setCurrentStep(num)}
+                      onClick={() => {
+                        triggerHaptic('light');
+                        setCurrentStep(num);
+                      }}
                       className={`min-w-[34px] h-[34px] rounded-xl text-xs font-black flex items-center justify-center transition-all border shrink-0 ${
                         isCurrent
                           ? 'bg-emerald-600 text-white border-emerald-700 shadow-sm scale-105'
@@ -1003,7 +1116,10 @@ export const ExamScoringView: React.FC<ExamScoringViewProps> = ({
               <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-2">
                 <button
                   type="button"
-                  onClick={() => setCurrentStep(prev => Math.max(1, prev - 1))}
+                  onClick={() => {
+                    triggerHaptic('light');
+                    setCurrentStep(prev => Math.max(1, prev - 1));
+                  }}
                   disabled={currentStep === 1}
                   className="w-full sm:w-auto px-5 py-3 rounded-2xl border border-slate-300 text-slate-700 text-xs font-black hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2 active:scale-95"
                 >
@@ -1023,7 +1139,10 @@ export const ExamScoringView: React.FC<ExamScoringViewProps> = ({
 
                 <button
                   type="button"
-                  onClick={() => setCurrentStep(prev => prev + 1)}
+                  onClick={() => {
+                    triggerHaptic('light');
+                    setCurrentStep(prev => prev + 1);
+                  }}
                   className="w-full sm:w-auto px-7 py-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl text-xs font-black shadow-sm transition flex items-center justify-center gap-2 active:scale-95"
                 >
                   <span>{currentStep === totalQuestions ? 'Review Seluruh Nilai' : 'Soal Selanjutnya'}</span>
@@ -1147,7 +1266,10 @@ export const ExamScoringView: React.FC<ExamScoringViewProps> = ({
                       <td className="px-3 py-2 text-center">
                         <button
                           type="button"
-                          onClick={() => setCurrentStep(idx + 1)}
+                          onClick={() => {
+                            triggerHaptic('light');
+                            setCurrentStep(idx + 1);
+                          }}
                           className="px-2 py-1 text-emerald-700 hover:bg-emerald-100 rounded text-[10px] font-bold transition flex items-center gap-1 mx-auto"
                         >
                           <Edit3 className="w-3 h-3" />

@@ -6,6 +6,9 @@ export interface Env {
 
 export function getDb(env?: Env) {
   let url = env?.DATABASE_URL || (typeof process !== 'undefined' ? process.env?.DATABASE_URL : undefined);
+  if (!url && env) {
+    url = (env as any).database_url || (env as any).DATABASE_URI || (env as any).DB_URL;
+  }
   if (!url) {
     throw new Error('DATABASE_URL belum terpasang di Cloudflare Pages Environment Variables. Silakan atur DATABASE_URL di Settings > Variables and Secrets lalu klik Redeploy.');
   }

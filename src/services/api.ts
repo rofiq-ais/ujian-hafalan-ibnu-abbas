@@ -82,6 +82,16 @@ export const api = {
     }
   },
 
+  async deleteSantri(id: string): Promise<{ success: boolean; message: string }> {
+    try {
+      const res = await fetch(`/api/santri?id=${encodeURIComponent(id)}`, { method: 'DELETE' });
+      return await handleResponse<{ success: boolean; message: string }>(res, 'Gagal menghapus data santri');
+    } catch (err) {
+      console.error('API deleteSantri error:', err);
+      throw err;
+    }
+  },
+
   // 2. Data Pengajar
   async getPengajar(kampus?: Kampus, marhalah?: Marhalah): Promise<PengajarItem[]> {
     try {
@@ -98,19 +108,30 @@ export const api = {
     }
   },
 
-  async savePengajar(data: Partial<PengajarItem>): Promise<{ success: boolean; id?: string }> {
+  async savePengajar(data: Partial<PengajarItem>[] | Partial<PengajarItem>): Promise<{ success: boolean; id?: string; count?: number }> {
     try {
       const res = await fetch('/api/pengajar', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data),
       });
-      return await handleResponse<{ success: boolean; id?: string }>(res, 'Gagal menyimpan data pengajar');
+      return await handleResponse<{ success: boolean; id?: string; count?: number }>(res, 'Gagal menyimpan data pengajar');
     } catch (err) {
       console.error('API savePengajar error:', err);
       throw err;
     }
   },
+
+  async deletePengajar(id: string): Promise<{ success: boolean; message: string }> {
+    try {
+      const res = await fetch(`/api/pengajar?id=${encodeURIComponent(id)}`, { method: 'DELETE' });
+      return await handleResponse<{ success: boolean; message: string }>(res, 'Gagal menghapus data pengajar');
+    } catch (err) {
+      console.error('API deletePengajar error:', err);
+      throw err;
+    }
+  },
+
 
   // 3. Penguji & Kandidat Setting
   async getPenguji(kampus?: Kampus, marhalah?: Marhalah): Promise<PengujiItem[]> {
@@ -193,5 +214,16 @@ export const api = {
       console.error('API savePenilaian error:', err);
       throw err;
     }
+  },
+
+  async deletePenilaian(id: string): Promise<{ success: boolean; message: string }> {
+    try {
+      const res = await fetch(`/api/penilaian?id=${encodeURIComponent(id)}`, { method: 'DELETE' });
+      return await handleResponse<{ success: boolean; message: string }>(res, 'Gagal menghapus penilaian');
+    } catch (err) {
+      console.error('API deletePenilaian error:', err);
+      throw err;
+    }
   }
 };
+

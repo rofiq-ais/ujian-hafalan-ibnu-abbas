@@ -16,7 +16,8 @@ import {
   Eye,
   SlidersHorizontal,
   Calendar,
-  UserCheck
+  UserCheck,
+  Edit3
 } from 'lucide-react';
 
 interface ReportCardViewProps {
@@ -24,6 +25,7 @@ interface ReportCardViewProps {
   kampus: Kampus;
   penilaianList: PenilaianRecord[];
   onNavigateToInput?: () => void;
+  onEditPenilaian?: (record: PenilaianRecord) => void;
 }
 
 export const ReportCardView: React.FC<ReportCardViewProps> = ({
@@ -31,7 +33,9 @@ export const ReportCardView: React.FC<ReportCardViewProps> = ({
   kampus,
   penilaianList,
   onNavigateToInput,
+  onEditPenilaian,
 }) => {
+
   // Filter sesuai unit aktif
   const unitRecords = useMemo(() => {
     return penilaianList.filter(
@@ -152,12 +156,25 @@ _Semoga ananda senantiasa istiqomah dalam menjaga dan mengamalkan kalamullah. Ba
           </div>
 
           <div className="flex items-center gap-2 w-full sm:w-auto">
+            {onEditPenilaian && activeRecord && (
+              <button
+                type="button"
+                onClick={() => onEditPenilaian(activeRecord)}
+                className="flex-1 sm:flex-none px-3.5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-800 border border-slate-300 text-xs font-black rounded-xl transition flex items-center justify-center gap-1.5 active:scale-95 shadow-2xs btn-tactile"
+                title="Edit nilai ujian santri ini kapanpun"
+              >
+                <Edit3 className="w-4 h-4 text-emerald-700 shrink-0" />
+                <span className="truncate">Edit Nilai</span>
+              </button>
+            )}
+
             <button
               onClick={handleCopyWhatsApp}
               disabled={!activeRecord}
               className="flex-1 sm:flex-none px-3.5 py-2.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-300 disabled:opacity-50 text-xs font-black rounded-xl transition flex items-center justify-center gap-1.5 active:scale-95 shadow-2xs btn-tactile"
               title="Salin ringkasan rapor siap kirim via WhatsApp ke wali santri"
             >
+
               {copiedWA ? (
                 <>
                   <Check className="w-4 h-4 text-emerald-700 shrink-0" />

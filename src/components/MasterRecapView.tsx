@@ -12,20 +12,27 @@ import {
   School,
   TrendingUp,
   Award,
-  Users
+  Users,
+  Edit3,
+  Trash2
 } from 'lucide-react';
 
 interface MasterRecapViewProps {
   marhalah: Marhalah;
   kampus: Kampus;
   penilaianList: PenilaianRecord[];
+  onEditPenilaian?: (record: PenilaianRecord) => void;
+  onDeletePenilaian?: (record: PenilaianRecord) => void;
 }
 
 export const MasterRecapView: React.FC<MasterRecapViewProps> = ({
   marhalah,
   kampus,
   penilaianList,
+  onEditPenilaian,
+  onDeletePenilaian,
 }) => {
+
   const [filterJenisUjian, setFilterJenisUjian] = useState<JenisUjian>('UAS');
   const [filterKelas, setFilterKelas] = useState<string>('ALL');
   const [filterStatus, setFilterStatus] = useState<'ALL' | 'SELESAI' | 'DRAFT'>('ALL');
@@ -306,7 +313,8 @@ export const MasterRecapView: React.FC<MasterRecapViewProps> = ({
                     <th className="px-3.5 py-3 text-center font-black bg-slate-200/60 border-r border-slate-200">
                       Rata-Rata
                     </th>
-                    <th className="px-3.5 py-3 text-center">Predikat</th>
+                    <th className="px-3.5 py-3 text-center border-r border-slate-200">Predikat</th>
+                    <th className="px-3.5 py-3 text-center no-print w-28">Aksi</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
@@ -345,10 +353,35 @@ export const MasterRecapView: React.FC<MasterRecapViewProps> = ({
                         <td className="px-3.5 py-2.5 text-center font-mono font-black text-slate-900 bg-slate-50 border-r border-slate-200">
                           {item.rataRata.toFixed(1)}
                         </td>
-                        <td className="px-3.5 py-2.5 text-center font-bold text-[10px] uppercase">
+                        <td className="px-3.5 py-2.5 text-center font-bold text-[10px] uppercase border-r border-slate-200">
                           <span className={`inline-block px-2.5 py-0.5 rounded-md border ${badge.bg} ${badge.border}`}>
                             {item.predikat}
                           </span>
+                        </td>
+                        <td className="px-3.5 py-2.5 text-center no-print">
+                          <div className="flex items-center justify-center gap-1">
+                            {onEditPenilaian && (
+                              <button
+                                type="button"
+                                onClick={() => onEditPenilaian(item)}
+                                className="px-2 py-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 rounded-lg text-[10px] font-black border border-emerald-300 transition flex items-center gap-1 active:scale-95"
+                                title="Edit Nilai Ujian Kapanpun"
+                              >
+                                <Edit3 className="w-3 h-3" />
+                                <span>Edit</span>
+                              </button>
+                            )}
+                            {onDeletePenilaian && (
+                              <button
+                                type="button"
+                                onClick={() => onDeletePenilaian(item)}
+                                className="p-1 text-rose-500 hover:text-rose-700 hover:bg-rose-50 rounded-lg transition active:scale-95"
+                                title="Hapus Nilai Ujian Ini"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            )}
+                          </div>
                         </td>
                       </tr>
                     );
@@ -384,16 +417,38 @@ export const MasterRecapView: React.FC<MasterRecapViewProps> = ({
                       <span className="text-slate-600">
                         {filterJenisUjian === 'UAS' ? `${item.jumlahJuz} Juz (${item.selectedJuzList.join(', ')})` : 'UTS (10 Soal)'}
                       </span>
-                      <span className={`inline-flex items-center gap-1 text-[10px] font-black ${
-                        isDraft ? 'text-amber-700' : 'text-emerald-700'
-                      }`}>
-                        {isDraft ? 'Draft Cicilan' : 'Selesai'}
-                      </span>
+                      <div className="flex items-center gap-1.5">
+                        <span className={`inline-flex items-center gap-1 text-[10px] font-black mr-1 ${
+                          isDraft ? 'text-amber-700' : 'text-emerald-700'
+                        }`}>
+                          {isDraft ? 'Cicilan' : 'Selesai'}
+                        </span>
+                        {onEditPenilaian && (
+                          <button
+                            type="button"
+                            onClick={() => onEditPenilaian(item)}
+                            className="px-2.5 py-1 bg-emerald-600 text-white rounded-lg text-[10px] font-bold flex items-center gap-1 active:scale-95"
+                          >
+                            <Edit3 className="w-3 h-3" />
+                            <span>Edit Nilai</span>
+                          </button>
+                        )}
+                        {onDeletePenilaian && (
+                          <button
+                            type="button"
+                            onClick={() => onDeletePenilaian(item)}
+                            className="p-1 text-rose-500 hover:bg-rose-100 rounded-lg"
+                          >
+                            <Trash2 className="w-3 h-3" />
+                          </button>
+                        )}
+                      </div>
                     </div>
                   </div>
                 );
               })}
             </div>
+
           </>
         )}
 

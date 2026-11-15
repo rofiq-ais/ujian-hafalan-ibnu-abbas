@@ -18,8 +18,11 @@ import {
   Sparkles,
   BookOpen,
   School,
-  BadgeCheck
+  BadgeCheck,
+  Edit3,
+  Trash2
 } from 'lucide-react';
+
 import { api, PengajarItem, PengujiItem } from '../services/api';
 
 interface MasterDataViewProps {
@@ -43,8 +46,11 @@ export const MasterDataView: React.FC<MasterDataViewProps> = ({
 
   // Modals
   const [showAddSantriModal, setShowAddSantriModal] = useState(false);
+  const [showEditSantriModal, setShowEditSantriModal] = useState(false);
   const [showAddPengajarModal, setShowAddPengajarModal] = useState(false);
+  const [showEditPengajarModal, setShowEditPengajarModal] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
+  const [showImportPengajarModal, setShowImportPengajarModal] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Form Tambah Santri
@@ -54,6 +60,14 @@ export const MasterDataView: React.FC<MasterDataViewProps> = ({
   const [halaqahSantri, setHalaqahSantri] = useState('');
   const [targetJuzSantri, setTargetJuzSantri] = useState('Juz 30, Juz 29');
 
+  // Form Edit Santri
+  const [editingSantri, setEditingSantri] = useState<Santri | null>(null);
+  const [editNamaSantri, setEditNamaSantri] = useState('');
+  const [editNisnSantri, setEditNisnSantri] = useState('');
+  const [editKelasSantri, setEditKelasSantri] = useState('');
+  const [editHalaqahSantri, setEditHalaqahSantri] = useState('');
+  const [editTargetJuzSantri, setEditTargetJuzSantri] = useState('');
+
   // Form Tambah Pengajar
   const [namaPengajar, setNamaPengajar] = useState('');
   const [panggilanPengajar, setPanggilanPengajar] = useState('');
@@ -61,9 +75,23 @@ export const MasterDataView: React.FC<MasterDataViewProps> = ({
   const [kampusPengajar, setKampusPengajar] = useState<Kampus>(kampus);
   const [genderPengajar, setGenderPengajar] = useState<'IKHWAN' | 'AKHWAT'>(kampus === 'BANAT' ? 'AKHWAT' : 'IKHWAN');
 
-  // File Upload Ref
+  // Form Edit Pengajar
+  const [editingPengajar, setEditingPengajar] = useState<PengajarItem | null>(null);
+  const [editNamaPengajar, setEditNamaPengajar] = useState('');
+  const [editPanggilanPengajar, setEditPanggilanPengajar] = useState('');
+  const [editMapelPengajar, setEditMapelPengajar] = useState('');
+  const [editKampusPengajar, setEditKampusPengajar] = useState<Kampus>(kampus);
+  const [editGenderPengajar, setEditGenderPengajar] = useState<'IKHWAN' | 'AKHWAT'>('IKHWAN');
+  const [editIsActivePengajar, setEditIsActivePengajar] = useState(true);
+
+  // File Upload Ref Santri
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [importedRows, setImportedRows] = useState<any[]>([]);
+
+  // File Upload Ref Pengajar
+  const pengajarFileInputRef = useRef<HTMLInputElement>(null);
+  const [importedPengajarRows, setImportedPengajarRows] = useState<any[]>([]);
+
 
   // State Pengajar & Kandidat Penguji
   const [pengajarList, setPengajarList] = useState<PengajarItem[]>([]);
@@ -221,9 +249,10 @@ export const MasterDataView: React.FC<MasterDataViewProps> = ({
       }
 
       // Parse lines (skipping header)
+      const delimiter = lines[0].includes(';') ? ';' : ',';
       const parsed: any[] = [];
       for (let i = 1; i < lines.length; i++) {
-        const parts = lines[i].split(',').map(p => p.trim().replace(/^["']|["']$/g, ''));
+        const parts = lines[i].split(delimiter).map(p => p.trim().replace(/^["']|["']$/g, ''));
         if (parts.length >= 2 && parts[0]) {
           parsed.push({
             nama: parts[0],
@@ -237,6 +266,7 @@ export const MasterDataView: React.FC<MasterDataViewProps> = ({
         }
       }
       setImportedRows(parsed);
+
     };
     reader.readAsText(file);
   };
@@ -264,6 +294,195 @@ export const MasterDataView: React.FC<MasterDataViewProps> = ({
       if (onRefresh) onRefresh();
     } catch (err: any) {
       alert('Gagal mengimport data: ' + err.message);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // --- Handlers Edit & Hapus Santri ---
+  const handleOpenEditSantri = (s: Santri) => {
+    setEditingSantri(s);
+    setEditNamaSantri(s.nama);
+    setEditNisnSantri(s.nisn);
+    setEditKelasSantri(s.kelas);
+    setEditHalaqahSantri(s.halaqah || '');
+    setEditTargetJuzSantri(s.targetJuz || 'Juz 30');
+    setShowEditSantriModal(true);
+  };
+
+  const handleSaveEditSantri = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingSantri || !editNamaSantri.trim()) return;
+
+    setIsSubmitting(true);
+    try {
+      await api.saveSantri({
+        id: editingSantri.id,
+        nama: editNamaSantri.trim(),
+        nisn: editNisnSantri.trim(),
+        kelas: editKelasSantri.trim(),
+        halaqah: editHalaqahSantri.trim() || 'Umum',
+        targetJuz: editTargetJuzSantri.trim() || 'Juz 30',
+        marhalah: editingSantri.marhalah,
+        kampus: editingSantri.kampus,
+      });
+
+      alert(`Alhamdulillah, data santri "${editNamaSantri}" berhasil diperbarui!`);
+      setShowEditSantriModal(false);
+      setEditingSantri(null);
+      if (onRefresh) onRefresh();
+    } catch (err: any) {
+      alert('Gagal memperbarui santri: ' + err.message);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleDeleteSantri = async (s: Santri) => {
+    if (!window.confirm(`Yakin ingin menghapus data santri "${s.nama}"? Catatan riwayat ujian santri ini juga akan terhapus.`)) {
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      await api.deleteSantri(s.id);
+      alert(`Data santri "${s.nama}" berhasil dihapus.`);
+      if (onRefresh) onRefresh();
+    } catch (err: any) {
+      alert('Gagal menghapus santri: ' + err.message);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // --- Handlers Edit & Hapus Pengajar ---
+  const handleOpenEditPengajar = (p: PengajarItem) => {
+    setEditingPengajar(p);
+    setEditNamaPengajar(p.nama);
+    setEditPanggilanPengajar(p.panggilan || '');
+    setEditMapelPengajar(p.mapel);
+    setEditKampusPengajar(p.kampus);
+    setEditGenderPengajar(p.gender);
+    setEditIsActivePengajar(p.isActive);
+    setShowEditPengajarModal(true);
+  };
+
+  const handleSaveEditPengajar = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingPengajar || !editNamaPengajar.trim()) return;
+
+    setIsSubmitting(true);
+    try {
+      await api.savePengajar({
+        id: editingPengajar.id,
+        nama: editNamaPengajar.trim(),
+        panggilan: editPanggilanPengajar.trim() || editNamaPengajar.trim(),
+        mapel: editMapelPengajar.trim(),
+        kampus: editKampusPengajar,
+        gender: editGenderPengajar,
+        isActive: editIsActivePengajar,
+        marhalah: editingPengajar.marhalah || 'SEMUA',
+      });
+
+      alert(`Alhamdulillah, data pengajar "${editNamaPengajar}" berhasil diperbarui!`);
+      setShowEditPengajarModal(false);
+      setEditingPengajar(null);
+      loadExtraData();
+      if (onRefresh) onRefresh();
+    } catch (err: any) {
+      alert('Gagal memperbarui pengajar: ' + err.message);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleDeletePengajar = async (p: PengajarItem) => {
+    if (!window.confirm(`Yakin ingin menghapus data pengajar "${p.nama}"?`)) {
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      await api.deletePengajar(p.id);
+      alert(`Data pengajar "${p.nama}" berhasil dihapus.`);
+      loadExtraData();
+      if (onRefresh) onRefresh();
+    } catch (err: any) {
+      alert('Gagal menghapus pengajar: ' + err.message);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // --- Handlers Import CSV Pengajar ---
+  const handlePengajarFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const text = event.target?.result as string;
+      if (!text) return;
+
+      const lines = text.split(/\r?\n/).filter(line => line.trim() !== '');
+      if (lines.length <= 1) {
+        alert('File CSV kosong atau hanya berisi baris header.');
+        return;
+      }
+
+      // Format: Nama Lengkap,Panggilan,Mata Pelajaran,Kampus,Gender,No HP
+      const delimiter = lines[0].includes(';') ? ';' : ',';
+      const parsed: any[] = [];
+      for (let i = 1; i < lines.length; i++) {
+        const parts = lines[i].split(delimiter).map(p => p.trim().replace(/^["']|["']$/g, ''));
+        if (parts.length >= 1 && parts[0]) {
+          const rawKampus = (parts[3] || '').toUpperCase();
+          const targetKampus: Kampus = rawKampus === 'BANAT' ? 'BANAT' : (rawKampus === 'BANIN' ? 'BANIN' : kampus);
+          const rawGender = (parts[4] || '').toUpperCase();
+          const targetGender: 'IKHWAN' | 'AKHWAT' = rawGender === 'AKHWAT' ? 'AKHWAT' : (rawGender === 'IKHWAN' ? 'IKHWAN' : (targetKampus === 'BANAT' ? 'AKHWAT' : 'IKHWAN'));
+
+          parsed.push({
+            nama: parts[0],
+            panggilan: parts[1] || parts[0],
+            mapel: parts[2] || "Tahfidz Al-Qur'an",
+            kampus: targetKampus,
+            gender: targetGender,
+            phone: parts[5] || null,
+            marhalah: 'SEMUA',
+            isActive: true,
+          });
+        }
+      }
+      setImportedPengajarRows(parsed);
+
+    };
+    reader.readAsText(file);
+  };
+
+  const handleDownloadPengajarTemplate = () => {
+    const templateCSV = '\uFEFFNama Lengkap,Nama Panggilan,Mata Pelajaran,Kampus (BANIN/BANAT),Gender (IKHWAN/AKHWAT),No HP\nUst. Ahmad Fauzi, Lc.,Ust. Fauzi,Tahfidz Al-Qur\'an,BANIN,IKHWAN,081234567890\nUsth. Sarah Mutmainnah, S.Ag.,Usth. Sarah,Tahfidz Al-Qur\'an,BANAT,AKHWAT,081234567892';
+    const blob = new Blob([templateCSV], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', 'Template_Import_Asatidz_Ibnu_Abbas.csv');
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const handleCommitPengajarImport = async () => {
+    if (importedPengajarRows.length === 0) return;
+    setIsSubmitting(true);
+    try {
+      await api.savePengajar(importedPengajarRows);
+      alert(`Alhamdulillah, berhasil mengimport ${importedPengajarRows.length} data asatidz/pengajar ke sistem!`);
+      setShowImportPengajarModal(false);
+      setImportedPengajarRows([]);
+      loadExtraData();
+      if (onRefresh) onRefresh();
+    } catch (err: any) {
+      alert('Gagal mengimport data pengajar: ' + err.message);
     } finally {
       setIsSubmitting(false);
     }
@@ -315,16 +534,27 @@ export const MasterDataView: React.FC<MasterDataViewProps> = ({
             )}
 
             {subTab === 'pengajar' && (
-              <button
-                type="button"
-                onClick={() => setShowAddPengajarModal(true)}
-                className="w-full sm:w-auto px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black rounded-xl shadow-md transition flex items-center justify-center gap-1.5 active:scale-95 btn-tactile"
-              >
-                <Plus className="w-3.5 h-3.5 shrink-0" />
-                <span>Tambah Pengajar Baru</span>
-              </button>
+              <>
+                <button
+                  type="button"
+                  onClick={() => setShowImportPengajarModal(true)}
+                  className="flex-1 sm:flex-none px-3.5 py-2.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 text-xs font-black rounded-xl border border-emerald-300 transition flex items-center justify-center gap-1.5 active:scale-95 btn-tactile"
+                >
+                  <Upload className="w-3.5 h-3.5 text-emerald-700 shrink-0" />
+                  <span className="truncate">Import CSV Asatidz</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowAddPengajarModal(true)}
+                  className="flex-1 sm:flex-none px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black rounded-xl shadow-md transition flex items-center justify-center gap-1.5 active:scale-95 btn-tactile"
+                >
+                  <Plus className="w-3.5 h-3.5 shrink-0" />
+                  <span className="truncate">Tambah Pengajar Baru</span>
+                </button>
+              </>
             )}
           </div>
+
         </div>
 
         {/* Modern Segmented Sub-Tab Controls */}
@@ -436,6 +666,7 @@ export const MasterDataView: React.FC<MasterDataViewProps> = ({
                       <th className="px-4 py-3.5">Halaqah</th>
                       <th className="px-4 py-3.5">Target Kurikulum</th>
                       <th className="px-4 py-3.5 text-center">Status</th>
+                      <th className="px-4 py-3.5 text-center w-24">Aksi</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
@@ -462,6 +693,26 @@ export const MasterDataView: React.FC<MasterDataViewProps> = ({
                             <Check className="w-3 h-3" />
                             Aktif
                           </span>
+                        </td>
+                        <td className="px-4 py-3 text-center">
+                          <div className="flex items-center justify-center gap-1">
+                            <button
+                              type="button"
+                              onClick={() => handleOpenEditSantri(s)}
+                              className="p-1.5 rounded-lg text-emerald-700 hover:bg-emerald-100 transition active:scale-95"
+                              title="Edit Data Santri"
+                            >
+                              <Edit3 className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteSantri(s)}
+                              className="p-1.5 rounded-lg text-rose-600 hover:bg-rose-100 transition active:scale-95"
+                              title="Hapus Data Santri"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     ))}
@@ -501,9 +752,29 @@ export const MasterDataView: React.FC<MasterDataViewProps> = ({
                         <span className="text-emerald-800 font-bold truncate block">{s.targetJuz || 'Juz 30'}</span>
                       </div>
                     </div>
+
+                    <div className="pt-2 border-t border-slate-100 flex items-center justify-end gap-2">
+                      <button
+                        type="button"
+                        onClick={() => handleOpenEditSantri(s)}
+                        className="px-2.5 py-1 rounded-lg text-[11px] font-bold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 flex items-center gap-1 active:scale-95"
+                      >
+                        <Edit3 className="w-3 h-3" />
+                        <span>Edit</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteSantri(s)}
+                        className="px-2.5 py-1 rounded-lg text-[11px] font-bold text-rose-600 bg-rose-50 hover:bg-rose-100 border border-rose-200 flex items-center gap-1 active:scale-95"
+                      >
+                        <Trash2 className="w-3 h-3" />
+                        <span>Hapus</span>
+                      </button>
+                    </div>
                   </div>
                 ))}
               </div>
+
             </>
           )}
         </div>
@@ -537,6 +808,7 @@ export const MasterDataView: React.FC<MasterDataViewProps> = ({
                       <th className="px-4 py-3.5">Kampus & Gender</th>
                       <th className="px-4 py-3.5">Marhalah</th>
                       <th className="px-4 py-3.5 text-center">Status</th>
+                      <th className="px-4 py-3.5 text-center w-24">Aksi</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
@@ -555,10 +827,34 @@ export const MasterDataView: React.FC<MasterDataViewProps> = ({
                         </td>
                         <td className="px-4 py-3 text-slate-600">{p.marhalah}</td>
                         <td className="px-4 py-3 text-center">
-                          <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
-                            <Check className="w-3 h-3" />
-                            Aktif
+                          <span className={`inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full border ${
+                            p.isActive
+                              ? 'text-emerald-700 bg-emerald-50 border-emerald-200'
+                              : 'text-slate-500 bg-slate-100 border-slate-200'
+                          }`}>
+                            {p.isActive && <Check className="w-3 h-3" />}
+                            {p.isActive ? 'Aktif' : 'Non-aktif'}
                           </span>
+                        </td>
+                        <td className="px-4 py-3 text-center">
+                          <div className="flex items-center justify-center gap-1">
+                            <button
+                              type="button"
+                              onClick={() => handleOpenEditPengajar(p)}
+                              className="p-1.5 rounded-lg text-emerald-700 hover:bg-emerald-100 transition active:scale-95"
+                              title="Edit Data Pengajar"
+                            >
+                              <Edit3 className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleDeletePengajar(p)}
+                              className="p-1.5 rounded-lg text-rose-600 hover:bg-rose-100 transition active:scale-95"
+                              title="Hapus Data Pengajar"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     ))}
@@ -589,9 +885,29 @@ export const MasterDataView: React.FC<MasterDataViewProps> = ({
                       <span className="font-bold text-emerald-800">{p.mapel}</span>
                       <span className="text-slate-500 font-medium">Unit: {p.marhalah}</span>
                     </div>
+
+                    <div className="pt-2 border-t border-slate-100 flex items-center justify-end gap-2">
+                      <button
+                        type="button"
+                        onClick={() => handleOpenEditPengajar(p)}
+                        className="px-2.5 py-1 rounded-lg text-[11px] font-bold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 flex items-center gap-1 active:scale-95"
+                      >
+                        <Edit3 className="w-3 h-3" />
+                        <span>Edit</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleDeletePengajar(p)}
+                        className="px-2.5 py-1 rounded-lg text-[11px] font-bold text-rose-600 bg-rose-50 hover:bg-rose-100 border border-rose-200 flex items-center gap-1 active:scale-95"
+                      >
+                        <Trash2 className="w-3 h-3" />
+                        <span>Hapus</span>
+                      </button>
+                    </div>
                   </div>
                 ))}
               </div>
+
             </>
           )}
         </div>
@@ -1068,6 +1384,340 @@ export const MasterDataView: React.FC<MasterDataViewProps> = ({
           </div>
         </div>
       )}
+
+      {/* MODAL EDIT SANTRI */}
+      {showEditSantriModal && editingSantri && (
+        <div className="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 animate-fade-up">
+          <form
+            onSubmit={handleSaveEditSantri}
+            className="bg-white rounded-3xl max-w-md w-full p-5 sm:p-6 shadow-2xl space-y-4 max-h-[90dvh] overflow-y-auto"
+          >
+            <div className="flex items-center justify-between border-b pb-3">
+              <div>
+                <h3 className="text-base font-black text-slate-900">Edit Data Santri</h3>
+                <p className="text-xs text-slate-500">
+                  Perbarui informasi santri {editingSantri.nama} kapanpun diperlukan.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowEditSantriModal(false);
+                  setEditingSantri(null);
+                }}
+                className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 flex items-center justify-center font-bold"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="space-y-3 text-xs">
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">Nama Lengkap Santri:</label>
+                <input
+                  type="text"
+                  required
+                  value={editNamaSantri}
+                  onChange={(e) => setEditNamaSantri(e.target.value)}
+                  className="w-full px-3.5 py-2.5 border rounded-xl focus:ring-2 focus:ring-emerald-500 focus:outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">NISN:</label>
+                <input
+                  type="text"
+                  value={editNisnSantri}
+                  onChange={(e) => setEditNisnSantri(e.target.value)}
+                  className="w-full px-3.5 py-2.5 border rounded-xl focus:ring-2 focus:ring-emerald-500 focus:outline-none font-mono"
+                />
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">Kelas:</label>
+                <input
+                  type="text"
+                  required
+                  value={editKelasSantri}
+                  onChange={(e) => setEditKelasSantri(e.target.value)}
+                  className="w-full px-3.5 py-2.5 border rounded-xl focus:ring-2 focus:ring-emerald-500 focus:outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">Halaqah:</label>
+                <input
+                  type="text"
+                  value={editHalaqahSantri}
+                  onChange={(e) => setEditHalaqahSantri(e.target.value)}
+                  className="w-full px-3.5 py-2.5 border rounded-xl focus:ring-2 focus:ring-emerald-500 focus:outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">Target Kurikulum Juz:</label>
+                <input
+                  type="text"
+                  value={editTargetJuzSantri}
+                  onChange={(e) => setEditTargetJuzSantri(e.target.value)}
+                  className="w-full px-3.5 py-2.5 border rounded-xl focus:ring-2 focus:ring-emerald-500 focus:outline-none"
+                />
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-3 border-t">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowEditSantriModal(false);
+                  setEditingSantri(null);
+                }}
+                className="px-4 py-2.5 bg-slate-100 text-slate-700 rounded-xl text-xs font-bold hover:bg-slate-200"
+              >
+                Batal
+              </button>
+              <button
+                type="submit"
+                disabled={isSubmitting}
+                className="px-5 py-2.5 bg-emerald-600 text-white rounded-xl text-xs font-black hover:bg-emerald-700 disabled:opacity-50 shadow-xs btn-tactile"
+              >
+                {isSubmitting ? 'Menyimpan...' : 'Simpan Perubahan'}
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {/* MODAL EDIT PENGAJAR */}
+      {showEditPengajarModal && editingPengajar && (
+        <div className="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 animate-fade-up">
+          <form
+            onSubmit={handleSaveEditPengajar}
+            className="bg-white rounded-3xl max-w-md w-full p-5 sm:p-6 shadow-2xl space-y-4 max-h-[90dvh] overflow-y-auto"
+          >
+            <div className="flex items-center justify-between border-b pb-3">
+              <div>
+                <h3 className="text-base font-black text-slate-900">Edit Data Pengajar / Asatidz</h3>
+                <p className="text-xs text-slate-500">
+                  Perbarui profil asatidz {editingPengajar.nama}.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowEditPengajarModal(false);
+                  setEditingPengajar(null);
+                }}
+                className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 flex items-center justify-center font-bold"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="space-y-3 text-xs">
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">Nama Lengkap & Gelar:</label>
+                <input
+                  type="text"
+                  required
+                  value={editNamaPengajar}
+                  onChange={(e) => setEditNamaPengajar(e.target.value)}
+                  className="w-full px-3.5 py-2.5 border rounded-xl focus:ring-2 focus:ring-emerald-500 focus:outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">Nama Panggilan:</label>
+                <input
+                  type="text"
+                  value={editPanggilanPengajar}
+                  onChange={(e) => setEditPanggilanPengajar(e.target.value)}
+                  className="w-full px-3.5 py-2.5 border rounded-xl focus:ring-2 focus:ring-emerald-500 focus:outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">Mata Pelajaran:</label>
+                <input
+                  type="text"
+                  required
+                  value={editMapelPengajar}
+                  onChange={(e) => setEditMapelPengajar(e.target.value)}
+                  className="w-full px-3.5 py-2.5 border rounded-xl focus:ring-2 focus:ring-emerald-500 focus:outline-none"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">Kampus Bertugas:</label>
+                  <select
+                    value={editKampusPengajar}
+                    onChange={(e) => setEditKampusPengajar(e.target.value as Kampus)}
+                    className="w-full px-3 py-2.5 border rounded-xl focus:ring-2 focus:ring-emerald-500 focus:outline-none font-bold"
+                  >
+                    <option value="BANIN">Kampus Banin (Putra)</option>
+                    <option value="BANAT">Kampus Banat (Putri)</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">Jenis Kelamin:</label>
+                  <select
+                    value={editGenderPengajar}
+                    onChange={(e) => setEditGenderPengajar(e.target.value as any)}
+                    className="w-full px-3 py-2.5 border rounded-xl focus:ring-2 focus:ring-emerald-500 focus:outline-none font-bold"
+                  >
+                    <option value="IKHWAN">Ikhwan</option>
+                    <option value="AKHWAT">Akhwat</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">Status Pengajar:</label>
+                <select
+                  value={editIsActivePengajar ? 'true' : 'false'}
+                  onChange={(e) => setEditIsActivePengajar(e.target.value === 'true')}
+                  className="w-full px-3 py-2.5 border rounded-xl focus:ring-2 focus:ring-emerald-500 focus:outline-none font-bold"
+                >
+                  <option value="true">Aktif Mengajar</option>
+                  <option value="false">Non-aktif / Cuti</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-3 border-t">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowEditPengajarModal(false);
+                  setEditingPengajar(null);
+                }}
+                className="px-4 py-2.5 bg-slate-100 text-slate-700 rounded-xl text-xs font-bold hover:bg-slate-200"
+              >
+                Batal
+              </button>
+              <button
+                type="submit"
+                disabled={isSubmitting}
+                className="px-5 py-2.5 bg-emerald-600 text-white rounded-xl text-xs font-black hover:bg-emerald-700 disabled:opacity-50 shadow-xs btn-tactile"
+              >
+                {isSubmitting ? 'Menyimpan...' : 'Simpan Perubahan'}
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {/* MODAL IMPORT EXCEL / CSV ASATIDZAH KBM */}
+      {showImportPengajarModal && (
+        <div className="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 animate-fade-up">
+          <div className="bg-white rounded-3xl max-w-lg w-full p-5 sm:p-6 shadow-2xl space-y-4 max-h-[90dvh] overflow-y-auto">
+            <div className="flex items-center justify-between border-b pb-3">
+              <div>
+                <h3 className="text-base font-black text-slate-900">Import Data Asatidz dari File CSV</h3>
+                <p className="text-xs text-slate-500">
+                  Tambahkan daftar asatidz & pengajar KBM secara massal dari Excel / CSV.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowImportPengajarModal(false);
+                  setImportedPengajarRows([]);
+                }}
+                className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 flex items-center justify-center font-bold"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Template Download Button */}
+            <div className="flex items-center justify-between bg-emerald-50/70 p-3 rounded-2xl border border-emerald-200 text-xs">
+              <div className="flex items-center gap-2">
+                <FileSpreadsheet className="w-4 h-4 text-emerald-700 shrink-0" />
+                <span className="font-bold text-emerald-950">Belum punya format CSV Asatidz?</span>
+              </div>
+              <button
+                type="button"
+                onClick={handleDownloadPengajarTemplate}
+                className="px-3 py-1 bg-white hover:bg-emerald-100 text-emerald-800 rounded-xl font-black text-[11px] border border-emerald-300 transition flex items-center gap-1 btn-tactile"
+              >
+                <Download className="w-3 h-3" />
+                <span>Unduh Template Asatidz</span>
+              </button>
+            </div>
+
+            {/* Drag & Drop / File Input */}
+            <input
+              type="file"
+              ref={pengajarFileInputRef}
+              onChange={handlePengajarFileUpload}
+              accept=".csv"
+              className="hidden"
+            />
+
+            <div 
+              onClick={() => pengajarFileInputRef.current?.click()}
+              className="border-2 border-dashed border-slate-300 hover:border-emerald-500 rounded-2xl p-6 text-center bg-slate-50/60 hover:bg-emerald-50/30 transition cursor-pointer"
+            >
+              <Upload className="w-8 h-8 text-emerald-600 mx-auto mb-2 opacity-80" />
+              <p className="text-xs font-bold text-slate-800">Klik untuk memilih file CSV Asatidz dari perangkat</p>
+              <p className="text-[10px] text-slate-400 mt-1">Kolom: Nama Lengkap, Panggilan, Mapel, Kampus, Gender, No HP</p>
+            </div>
+
+            {/* Preview of Imported Pengajar Rows */}
+            {importedPengajarRows.length > 0 && (
+              <div className="space-y-2">
+                <div className="flex items-center justify-between text-xs font-bold">
+                  <span className="text-emerald-800">Preview: {importedPengajarRows.length} Asatidz Siap Diimport</span>
+                  <button 
+                    onClick={() => setImportedPengajarRows([])} 
+                    className="text-slate-400 hover:text-red-600 text-[10px]"
+                  >
+                    Batal Pilih
+                  </button>
+                </div>
+                <div className="max-h-36 overflow-y-auto border border-slate-200 rounded-xl p-2 bg-slate-50 text-[11px] divide-y divide-slate-200">
+                  {importedPengajarRows.slice(0, 10).map((r, i) => (
+                    <div key={i} className="py-1 flex items-center justify-between">
+                      <span className="font-bold text-slate-800">{r.nama}</span>
+                      <span className="text-slate-500">{r.mapel} • {r.kampus}</span>
+                    </div>
+                  ))}
+                  {importedPengajarRows.length > 10 && (
+                    <div className="py-1 text-center text-slate-400 text-[10px]">
+                      ...dan {importedPengajarRows.length - 10} pengajar lainnya
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            <div className="flex items-center justify-end gap-2 pt-2 border-t">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowImportPengajarModal(false);
+                  setImportedPengajarRows([]);
+                }}
+                className="px-4 py-2.5 bg-slate-100 text-slate-700 rounded-xl text-xs font-bold hover:bg-slate-200"
+              >
+                Batal
+              </button>
+              <button
+                type="button"
+                onClick={handleCommitPengajarImport}
+                disabled={importedPengajarRows.length === 0 || isSubmitting}
+                className="px-5 py-2.5 bg-emerald-600 text-white rounded-xl text-xs font-black hover:bg-emerald-700 disabled:opacity-50 shadow-sm btn-tactile"
+              >
+                {isSubmitting ? 'Mengimport...' : `Simpan ${importedPengajarRows.length} Pengajar`}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
+

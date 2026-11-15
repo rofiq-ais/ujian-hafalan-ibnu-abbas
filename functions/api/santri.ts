@@ -87,3 +87,18 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
     return errorResponse(err.message || 'Gagal menyimpan data santri', 500);
   }
 };
+
+export const onRequestDelete: PagesFunction<Env> = async ({ request, env }) => {
+  try {
+    const url = new URL(request.url);
+    const id = url.searchParams.get('id');
+    if (!id) return errorResponse('ID santri diperlukan', 400);
+
+    const sql = getDb(env);
+    await sql`DELETE FROM santri WHERE id = ${id}`;
+    return jsonResponse({ success: true, message: 'Data santri berhasil dihapus' });
+  } catch (err: any) {
+    return errorResponse(err.message || 'Gagal menghapus data santri', 500);
+  }
+};
+

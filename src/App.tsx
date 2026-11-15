@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Marhalah, Kampus, PenilaianRecord, Santri } from './types';
+import { Marhalah, Kampus, PenilaianRecord, Santri, JenisUjian } from './types';
 import { MOCK_SANTRI, MOCK_PENILAIAN } from './data/mockData';
 import { api, PengujiItem } from './services/api';
 import { Navbar } from './components/Navbar';
@@ -21,6 +21,7 @@ export function App() {
   const [pengujiList, setPengujiList] = useState<PengujiItem[]>([]);
   const [activePengujiNama, setActivePengujiNama] = useState<string>('Ust. Ahmad Fauzi, Lc.');
   const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [targetEditExam, setTargetEditExam] = useState<{ santriId: string; jenisUjian: JenisUjian } | null>(null);
 
   // Load initial data from Neon Postgres / local fallback
   const loadData = async (targetKampus = kampus, targetMarhalah = marhalah) => {
@@ -77,6 +78,27 @@ export function App() {
     }
   };
 
+  const handleEditPenilaian = (record: PenilaianRecord) => {
+    setTargetEditExam({ santriId: record.santriId, jenisUjian: record.jenisUjian });
+    setActiveTab('input');
+  };
+
+  const handleDeletePenilaian = async (record: PenilaianRecord) => {
+    if (!window.confirm(`Yakin ingin menghapus data nilai ujian ${record.jenisUjian} untuk ${record.namaSantri}?`)) {
+      return;
+    }
+    // Optimistic delete
+    setPenilaianList(prev => prev.filter(p => p.id !== record.id));
+
+    try {
+      await api.deletePenilaian(record.id);
+      alert(`Data nilai ujian ${record.namaSantri} berhasil dihapus.`);
+    } catch (err: any) {
+      alert('Gagal menghapus penilaian: ' + err.message);
+      loadData();
+    }
+  };
+
   const handleViewRapor = (_record: PenilaianRecord) => {
     setActiveTab('rapor');
   };
@@ -117,6 +139,8 @@ export function App() {
               pengujiList={pengujiList}
               onSavePenilaian={handleSavePenilaian}
               onViewRapor={handleViewRapor}
+              targetEditExam={targetEditExam}
+              onClearTargetEditExam={() => setTargetEditExam(null)}
             />
           )}
 
@@ -126,6 +150,7 @@ export function App() {
               kampus={kampus}
               penilaianList={penilaianList}
               onNavigateToInput={() => setActiveTab('input')}
+              onEditPenilaian={handleEditPenilaian}
             />
           )}
 
@@ -134,6 +159,8 @@ export function App() {
               marhalah={marhalah}
               kampus={kampus}
               penilaianList={penilaianList}
+              onEditPenilaian={handleEditPenilaian}
+              onDeletePenilaian={handleDeletePenilaian}
             />
           )}
 
@@ -147,6 +174,7 @@ export function App() {
           )}
         </div>
       </main>
+
 
       {/* Interactive Guidelines & Formula Modal */}
       <RumusModal

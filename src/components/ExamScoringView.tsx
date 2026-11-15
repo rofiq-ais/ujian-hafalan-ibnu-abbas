@@ -34,6 +34,8 @@ interface ExamScoringViewProps {
   pengujiList?: PengujiItem[];
   onSavePenilaian: (record: PenilaianRecord) => void;
   onViewRapor: (record: PenilaianRecord) => void;
+  targetEditExam?: { santriId: string; jenisUjian: JenisUjian } | null;
+  onClearTargetEditExam?: () => void;
 }
 
 export const ExamScoringView: React.FC<ExamScoringViewProps> = ({
@@ -45,6 +47,8 @@ export const ExamScoringView: React.FC<ExamScoringViewProps> = ({
   pengujiList = [],
   onSavePenilaian,
   onViewRapor,
+  targetEditExam,
+  onClearTargetEditExam,
 }) => {
   // Filter santri sesuai konteks Marhalah & Kampus
   const filteredSantri = useMemo(() => {
@@ -57,6 +61,19 @@ export const ExamScoringView: React.FC<ExamScoringViewProps> = ({
   const [selectedPenguji, setSelectedPenguji] = useState<string>(activePengujiNama);
   const [jenisUjian, setJenisUjian] = useState<JenisUjian>('UAS');
   const [selectedJuz, setSelectedJuz] = useState<string[]>(['Juz 30', 'Juz 29']);
+
+  // Handle incoming targetEditExam
+  useEffect(() => {
+    if (targetEditExam) {
+      setSelectedSantriId(targetEditExam.santriId);
+      setJenisUjian(targetEditExam.jenisUjian);
+      setCurrentStep(0);
+      if (onClearTargetEditExam) {
+        onClearTargetEditExam();
+      }
+    }
+  }, [targetEditExam, onClearTargetEditExam]);
+
 
   // Sync selectedPenguji if activePengujiNama changes
   useEffect(() => {
@@ -706,18 +723,32 @@ export const ExamScoringView: React.FC<ExamScoringViewProps> = ({
               </div>
             )}
 
-            {/* Tombol Mulai Ujian */}
-            <div className="pt-2 flex justify-end">
+            {/* Tombol Mulai / Edit Ujian */}
+            <div className="pt-2 flex flex-col sm:flex-row items-center justify-end gap-2.5">
+              {existingRecord && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    handleStartExam();
+                    setCurrentStep(totalQuestions + 1);
+                  }}
+                  className="w-full sm:w-auto px-5 py-3.5 bg-slate-100 hover:bg-slate-200 text-slate-800 text-sm font-black rounded-2xl border border-slate-300 transition-all flex items-center justify-center gap-2 active:scale-95 btn-tactile"
+                >
+                  <Edit3 className="w-4 h-4 text-emerald-700" />
+                  <span>Review & Langsung Ubah Butir Soal</span>
+                </button>
+              )}
               <button
                 type="button"
                 onClick={handleStartExam}
-                className="w-full sm:w-auto px-7 py-3.5 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-black rounded-2xl shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2 active:scale-95"
+                className="w-full sm:w-auto px-7 py-3.5 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-black rounded-2xl shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2 active:scale-95 btn-tactile"
               >
-                <span>{existingRecord ? 'Lanjutkan Lembar Penilaian' : 'Mulai / Buka Lembar Penilaian'}</span>
+                <span>{existingRecord ? 'Edit Mulai dari Soal 1' : 'Mulai / Buka Lembar Penilaian'}</span>
                 <ArrowRight className="w-4 h-4" />
               </button>
             </div>
           </div>
+
         </div>
       )}
 

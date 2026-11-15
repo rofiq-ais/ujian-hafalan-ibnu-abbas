@@ -649,14 +649,14 @@ export const ExamScoringView: React.FC<ExamScoringViewProps> = ({
                       <div className="min-w-0 pr-2">
                         <p className="font-extrabold text-xs truncate">{s.nama}</p>
                         <p className={`text-[10px] mt-0.5 truncate ${isSelected ? 'text-emerald-100' : 'text-slate-400'}`}>
-                          Kelas: {s.kelas} • NISN: {s.nisn}
+                          Kelas: {s.kelas} • NIS: {s.nisn}
                         </p>
                       </div>
                       {isSelected ? (
                         <Check className="w-4 h-4 text-white shrink-0" />
                       ) : (
-                        <span className="text-[10px] px-2 py-0.5 rounded bg-slate-100 text-slate-600 font-bold shrink-0">
-                          {s.targetJuz || 'Juz 30'}
+                        <span className="text-[10px] px-2 py-0.5 rounded bg-emerald-50 text-emerald-800 border border-emerald-200 font-bold shrink-0">
+                          {s.kelas}
                         </span>
                       )}
                     </button>
@@ -666,23 +666,19 @@ export const ExamScoringView: React.FC<ExamScoringViewProps> = ({
 
               {/* Selected Santri Detail Preview Card */}
               {currentSantri && (
-                <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200/90 text-xs grid grid-cols-2 sm:grid-cols-4 gap-3 mt-2">
+                <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200/90 text-xs grid grid-cols-2 sm:grid-cols-3 gap-3 mt-2">
                   <div>
                     <span className="text-slate-400 block text-[10px] font-bold uppercase">Santri Terpilih:</span>
-                    <span className="font-extrabold text-slate-900 text-sm">{currentSantri.nama}</span>
+                    <span className="font-extrabold text-slate-900 text-sm truncate block">{currentSantri.nama}</span>
+                  </div>
+                  <div>
+                    <span className="text-slate-400 block text-[10px] font-bold uppercase">NIS:</span>
+                    <span className="font-mono font-bold text-slate-800 text-sm">{currentSantri.nisn}</span>
                   </div>
                   <div>
                     <span className="text-slate-400 block text-[10px] font-bold uppercase">Kelas / Jenjang:</span>
-                    <span className="font-bold text-slate-800">{currentSantri.kelas}</span>
-                  </div>
-                  <div>
-                    <span className="text-slate-400 block text-[10px] font-bold uppercase">Halaqah Asrama:</span>
-                    <span className="font-bold text-slate-800">{currentSantri.halaqah || 'Umum'}</span>
-                  </div>
-                  <div>
-                    <span className="text-slate-400 block text-[10px] font-bold uppercase">Target Kurikulum:</span>
-                    <span className="inline-block mt-0.5 px-2 py-0.5 rounded-md font-extrabold bg-emerald-100 text-emerald-800 text-[11px]">
-                      {currentSantri.targetJuz || 'Juz 30'}
+                    <span className="inline-block mt-0.5 px-2.5 py-0.5 rounded-lg font-extrabold bg-emerald-100 text-emerald-800 text-xs border border-emerald-200">
+                      {currentSantri.kelas}
                     </span>
                   </div>
                 </div>

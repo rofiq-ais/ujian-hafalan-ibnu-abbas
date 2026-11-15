@@ -26,6 +26,19 @@ import {
 
 import { api, PengajarItem, PengujiItem } from '../services/api';
 
+// Daftar opsi kelas standar: 1 MI sampai 3 Ula/MTS
+export const SEMUA_OPSI_KELAS = [
+  '1 MI',
+  '2 MI',
+  '3 MI',
+  '4 MI',
+  '5 MI',
+  '6 MI',
+  '1 Ula / MTs',
+  '2 Ula / MTs',
+  '3 Ula / MTs',
+];
+
 interface MasterDataViewProps {
   marhalah: Marhalah;
   kampus: Kampus;
@@ -55,20 +68,18 @@ export const MasterDataView: React.FC<MasterDataViewProps> = ({
   const [showImportPengajarModal, setShowImportPengajarModal] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Form Tambah Santri
+  // Form Tambah Santri (Cukup Nama, NIS, Kelas dengan Dropdown)
   const [namaSantri, setNamaSantri] = useState('');
   const [nisnSantri, setNisnSantri] = useState('');
-  const [kelasSantri, setKelasSantri] = useState(marhalah === 'MI' ? '5A MI' : '7A Ula/MTs');
-  const [halaqahSantri, setHalaqahSantri] = useState('');
-  const [targetJuzSantri, setTargetJuzSantri] = useState('Juz 30, Juz 29');
+  const [kelasSantri, setKelasSantri] = useState(marhalah === 'MI' ? '1 MI' : '1 Ula / MTs');
+  const [isCustomKelas, setIsCustomKelas] = useState(false);
 
   // Form Edit Santri
   const [editingSantri, setEditingSantri] = useState<Santri | null>(null);
   const [editNamaSantri, setEditNamaSantri] = useState('');
   const [editNisnSantri, setEditNisnSantri] = useState('');
   const [editKelasSantri, setEditKelasSantri] = useState('');
-  const [editHalaqahSantri, setEditHalaqahSantri] = useState('');
-  const [editTargetJuzSantri, setEditTargetJuzSantri] = useState('');
+  const [isEditCustomKelas, setIsEditCustomKelas] = useState(false);
 
   // Form Tambah Pengajar
   const [namaPengajar, setNamaPengajar] = useState('');
@@ -160,9 +171,9 @@ export const MasterDataView: React.FC<MasterDataViewProps> = ({
       await api.saveSantri({
         nama: namaSantri.trim(),
         nisn: nisnSantri.trim() || String(Math.floor(1000000000 + Math.random() * 9000000000)),
-        kelas: kelasSantri,
-        halaqah: halaqahSantri.trim() || 'Umum',
-        targetJuz: targetJuzSantri.trim() || 'Juz 30',
+        kelas: kelasSantri.trim(),
+        halaqah: 'Umum',
+        targetJuz: 'Juz 30',
         marhalah,
         kampus,
       });
@@ -171,6 +182,8 @@ export const MasterDataView: React.FC<MasterDataViewProps> = ({
       setShowAddSantriModal(false);
       setNamaSantri('');
       setNisnSantri('');
+      setKelasSantri(marhalah === 'MI' ? '1 MI' : '1 Ula / MTs');
+      setIsCustomKelas(false);
       if (onRefresh) onRefresh();
     } catch (err: any) {
       alert('Gagal menambah santri: ' + err.message);
@@ -259,7 +272,7 @@ export const MasterDataView: React.FC<MasterDataViewProps> = ({
           parsed.push({
             nama: parts[0],
             nisn: parts[1] || '-',
-            kelas: parts[2] || (marhalah === 'MI' ? '5A MI' : '7A Ula/MTs'),
+            kelas: parts[2] || (marhalah === 'MI' ? '1 MI' : '1 Ula / MTs'),
             halaqah: parts[3] || 'Umum',
             targetJuz: parts[4] || 'Juz 30',
             marhalah,
@@ -274,7 +287,7 @@ export const MasterDataView: React.FC<MasterDataViewProps> = ({
   };
 
   const handleDownloadTemplate = () => {
-    const templateCSV = '\uFEFFNama Santri,NISN,Kelas,Halaqah,Target Kurikulum\nMuhammad Abdullah,0081234567,7A Ula/MTs,Halaqah Abu Bakar,Juz 30, Juz 29\nFatimah Azzahra,0081234568,7B Ula/MTs,Halaqah Khadijah,Juz 30';
+    const templateCSV = '\uFEFFNama Santri,NIS,Kelas\nMuhammad Abdullah,2024001,1 Ula / MTs\nFatimah Azzahra,2024002,1 Ula / MTs\nIbrahim Khalil,2024003,5 MI';
     const blob = new Blob([templateCSV], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
@@ -307,8 +320,7 @@ export const MasterDataView: React.FC<MasterDataViewProps> = ({
     setEditNamaSantri(s.nama);
     setEditNisnSantri(s.nisn);
     setEditKelasSantri(s.kelas);
-    setEditHalaqahSantri(s.halaqah || '');
-    setEditTargetJuzSantri(s.targetJuz || 'Juz 30');
+    setIsEditCustomKelas(!SEMUA_OPSI_KELAS.includes(s.kelas));
     setShowEditSantriModal(true);
   };
 
@@ -323,8 +335,8 @@ export const MasterDataView: React.FC<MasterDataViewProps> = ({
         nama: editNamaSantri.trim(),
         nisn: editNisnSantri.trim(),
         kelas: editKelasSantri.trim(),
-        halaqah: editHalaqahSantri.trim() || 'Umum',
-        targetJuz: editTargetJuzSantri.trim() || 'Juz 30',
+        halaqah: editingSantri.halaqah || 'Umum',
+        targetJuz: editingSantri.targetJuz || 'Juz 30',
         marhalah: editingSantri.marhalah,
         kampus: editingSantri.kampus,
       });
@@ -626,7 +638,7 @@ export const MasterDataView: React.FC<MasterDataViewProps> = ({
           onChange={(e) => setSearchTerm(e.target.value)}
           placeholder={
             subTab === 'santri'
-              ? 'Cari nama santri, NISN, kelas, atau halaqah...'
+              ? 'Cari nama santri, NIS, atau kelas...'
               : subTab === 'pengajar'
               ? 'Cari nama pengajar, panggilan, atau mata pelajaran...'
               : 'Cari nama calon penguji atau musyrif...'
@@ -671,7 +683,7 @@ export const MasterDataView: React.FC<MasterDataViewProps> = ({
             </div>
           ) : (
             <>
-              {/* A. Tampilan Desktop & Mobile Table */}
+              {/* A. Tampilan Desktop & Mobile Table (Nama, NIS, Kelas) */}
               <div className={`${showMasterTableMode ? 'block' : 'hidden md:block'} bg-white rounded-3xl shadow-sm border border-slate-200/90 overflow-hidden`}>
                 {showMasterTableMode && (
                   <div className="md:hidden bg-amber-50 px-3.5 py-2 border-b border-amber-200/70 text-[11px] font-medium text-amber-800 flex items-center justify-between">
@@ -679,15 +691,13 @@ export const MasterDataView: React.FC<MasterDataViewProps> = ({
                   </div>
                 )}
                 <div className="overflow-x-auto" tabIndex={0} role="region" aria-label="Tabel Data Santri">
-                  <table className="w-full min-w-[720px] text-xs text-left border-collapse">
+                  <table className="w-full min-w-[560px] text-xs text-left border-collapse">
                     <thead className="bg-slate-50 text-slate-700 uppercase font-black border-b border-slate-200">
                       <tr>
                         <th className="px-4 py-3.5 text-center w-12 whitespace-nowrap">No</th>
                         <th className="px-4 py-3.5 whitespace-nowrap">Nama Santri</th>
-                        <th className="px-4 py-3.5 whitespace-nowrap">NISN</th>
+                        <th className="px-4 py-3.5 whitespace-nowrap">NIS</th>
                         <th className="px-4 py-3.5 whitespace-nowrap">Kelas</th>
-                        <th className="px-4 py-3.5 whitespace-nowrap">Halaqah</th>
-                        <th className="px-4 py-3.5 whitespace-nowrap">Target Kurikulum</th>
                         <th className="px-4 py-3.5 text-center whitespace-nowrap">Status</th>
                         <th className="px-4 py-3.5 text-center w-24 whitespace-nowrap">Aksi</th>
                       </tr>
@@ -701,14 +711,8 @@ export const MasterDataView: React.FC<MasterDataViewProps> = ({
                           </td>
                           <td className="px-4 py-3 font-mono text-slate-600 whitespace-nowrap">{s.nisn}</td>
                           <td className="px-4 py-3 font-semibold text-slate-700 whitespace-nowrap">
-                            <span className="px-2 py-0.5 rounded bg-slate-100 border border-slate-200 text-slate-700 text-[11px] font-bold">
+                            <span className="px-2.5 py-0.5 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold">
                               {s.kelas}
-                            </span>
-                          </td>
-                          <td className="px-4 py-3 text-slate-600 whitespace-nowrap">{s.halaqah || 'Umum'}</td>
-                          <td className="px-4 py-3 whitespace-nowrap">
-                            <span className="px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-800 text-[10px] font-bold border border-emerald-200 inline-block">
-                              {s.targetJuz || 'Juz 30'}
                             </span>
                           </td>
                           <td className="px-4 py-3 text-center whitespace-nowrap">
@@ -744,37 +748,26 @@ export const MasterDataView: React.FC<MasterDataViewProps> = ({
                 </div>
               </div>
 
-              {/* B. Tampilan Mobile Cards (md:hidden) */}
+              {/* B. Tampilan Mobile Cards (Nama, NIS, Kelas) */}
               <div className={`${showMasterTableMode ? 'hidden' : 'block md:hidden'} space-y-2.5`}>
-                {filteredSantri.map((s, idx) => (
+                {filteredSantri.map((s) => (
                   <div
                     key={s.id}
                     className="p-3.5 rounded-2xl bg-white border border-slate-200 shadow-2xs space-y-2.5"
                   >
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="flex items-center gap-2 min-w-0">
-                        <div className="w-8 h-8 rounded-xl bg-emerald-100 text-emerald-800 font-black text-xs flex items-center justify-center shrink-0">
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <div className="w-9 h-9 rounded-xl bg-emerald-100 text-emerald-800 font-black text-xs flex items-center justify-center shrink-0">
                           {s.nama.charAt(0)}
                         </div>
                         <div className="min-w-0">
                           <h4 className="font-black text-xs text-slate-900 truncate">{s.nama}</h4>
-                          <span className="text-[10px] font-mono text-slate-500">NISN: {s.nisn}</span>
+                          <span className="text-[10px] font-mono text-slate-500">NIS: {s.nisn}</span>
                         </div>
                       </div>
-                      <span className="px-2 py-0.5 rounded bg-slate-100 text-slate-700 font-bold text-[10px] border border-slate-200 shrink-0">
+                      <span className="px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-800 font-bold text-xs border border-emerald-200 shrink-0">
                         {s.kelas}
                       </span>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-2 text-[11px] pt-1 border-t border-slate-100">
-                      <div>
-                        <span className="text-[9px] uppercase font-bold text-slate-400 block">Halaqah:</span>
-                        <span className="text-slate-700 font-medium truncate block">{s.halaqah || 'Umum'}</span>
-                      </div>
-                      <div>
-                        <span className="text-[9px] uppercase font-bold text-slate-400 block">Target Kurikulum:</span>
-                        <span className="text-emerald-800 font-bold truncate block">{s.targetJuz || 'Juz 30'}</span>
-                      </div>
                     </div>
 
                     <div className="pt-2 border-t border-slate-100 flex items-center justify-end gap-2">
@@ -1126,7 +1119,7 @@ export const MasterDataView: React.FC<MasterDataViewProps> = ({
               </button>
             </div>
 
-            <div className="space-y-3 text-xs">
+            <div className="space-y-3.5 text-xs">
               <div>
                 <label className="block font-bold text-slate-700 mb-1">Nama Lengkap Santri:</label>
                 <input
@@ -1135,52 +1128,73 @@ export const MasterDataView: React.FC<MasterDataViewProps> = ({
                   value={namaSantri}
                   onChange={(e) => setNamaSantri(e.target.value)}
                   placeholder="Contoh: Muhammad Abdullah"
-                  className="w-full px-3.5 py-2.5 border rounded-xl focus:ring-2 focus:ring-emerald-500 focus:outline-none"
+                  className="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:outline-none font-medium text-slate-800"
                 />
               </div>
 
               <div>
-                <label className="block font-bold text-slate-700 mb-1">NISN:</label>
+                <label className="block font-bold text-slate-700 mb-1">NIS (Nomor Induk Santri):</label>
                 <input
                   type="text"
                   value={nisnSantri}
                   onChange={(e) => setNisnSantri(e.target.value)}
-                  placeholder="Contoh: 0081234567"
-                  className="w-full px-3.5 py-2.5 border rounded-xl focus:ring-2 focus:ring-emerald-500 focus:outline-none font-mono"
+                  placeholder="Contoh: 20240101 (opsional)"
+                  className="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:outline-none font-mono text-slate-800"
                 />
               </div>
 
               <div>
-                <label className="block font-bold text-slate-700 mb-1">Kelas:</label>
-                <input
-                  type="text"
-                  required
-                  value={kelasSantri}
-                  onChange={(e) => setKelasSantri(e.target.value)}
-                  className="w-full px-3.5 py-2.5 border rounded-xl focus:ring-2 focus:ring-emerald-500 focus:outline-none"
-                />
-              </div>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block font-bold text-slate-700">Kelas:</label>
+                  <button
+                    type="button"
+                    onClick={() => setIsCustomKelas(!isCustomKelas)}
+                    className="text-[11px] text-emerald-700 hover:text-emerald-800 font-bold hover:underline"
+                  >
+                    {isCustomKelas ? '← Pilih Dropdown' : '+ Ketik Manual'}
+                  </button>
+                </div>
 
-              <div>
-                <label className="block font-bold text-slate-700 mb-1">Halaqah:</label>
-                <input
-                  type="text"
-                  value={halaqahSantri}
-                  onChange={(e) => setHalaqahSantri(e.target.value)}
-                  placeholder="Contoh: Halaqah Abu Bakar"
-                  className="w-full px-3.5 py-2.5 border rounded-xl focus:ring-2 focus:ring-emerald-500 focus:outline-none"
-                />
-              </div>
-
-              <div>
-                <label className="block font-bold text-slate-700 mb-1">Target Kurikulum Juz:</label>
-                <input
-                  type="text"
-                  value={targetJuzSantri}
-                  onChange={(e) => setTargetJuzSantri(e.target.value)}
-                  placeholder="Contoh: Juz 30, Juz 29"
-                  className="w-full px-3.5 py-2.5 border rounded-xl focus:ring-2 focus:ring-emerald-500 focus:outline-none"
-                />
+                {isCustomKelas ? (
+                  <input
+                    type="text"
+                    required
+                    value={kelasSantri}
+                    onChange={(e) => setKelasSantri(e.target.value)}
+                    placeholder="Contoh: 1A MI atau 7B Ula"
+                    className="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:outline-none font-medium text-slate-800"
+                  />
+                ) : (
+                  <select
+                    value={kelasSantri}
+                    onChange={(e) => {
+                      if (e.target.value === 'CUSTOM') {
+                        setIsCustomKelas(true);
+                      } else {
+                        setKelasSantri(e.target.value);
+                      }
+                    }}
+                    className="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:outline-none bg-white font-bold text-slate-800"
+                  >
+                    <optgroup label="Tingkat MI (Madrasah Ibtidaiyah)">
+                      <option value="1 MI">Kelas 1 MI</option>
+                      <option value="2 MI">Kelas 2 MI</option>
+                      <option value="3 MI">Kelas 3 MI</option>
+                      <option value="4 MI">Kelas 4 MI</option>
+                      <option value="5 MI">Kelas 5 MI</option>
+                      <option value="6 MI">Kelas 6 MI</option>
+                    </optgroup>
+                    <optgroup label="Tingkat Ula / MTs">
+                      <option value="1 Ula / MTs">Kelas 1 Ula / MTs</option>
+                      <option value="2 Ula / MTs">Kelas 2 Ula / MTs</option>
+                      <option value="3 Ula / MTs">Kelas 3 Ula / MTs</option>
+                    </optgroup>
+                    <option value="CUSTOM">+ Tulis Kelas Manual...</option>
+                  </select>
+                )}
+                <p className="text-[10px] text-slate-400 mt-1">
+                  Pilih tingkat kelas 1 MI sampai 3 Ula/MTS.
+                </p>
               </div>
             </div>
 
@@ -1387,7 +1401,7 @@ export const MasterDataView: React.FC<MasterDataViewProps> = ({
                   {importedRows.slice(0, 10).map((r, i) => (
                     <div key={i} className="py-1 flex items-center justify-between">
                       <span className="font-bold text-slate-800">{r.nama}</span>
-                      <span className="text-slate-500">{r.kelas} • {r.targetJuz}</span>
+                      <span className="text-slate-500 font-mono">NIS: {r.nisn} • {r.kelas}</span>
                     </div>
                   ))}
                   {importedRows.length > 10 && (
@@ -1449,7 +1463,7 @@ export const MasterDataView: React.FC<MasterDataViewProps> = ({
               </button>
             </div>
 
-            <div className="space-y-3 text-xs">
+            <div className="space-y-3.5 text-xs">
               <div>
                 <label className="block font-bold text-slate-700 mb-1">Nama Lengkap Santri:</label>
                 <input
@@ -1457,49 +1471,76 @@ export const MasterDataView: React.FC<MasterDataViewProps> = ({
                   required
                   value={editNamaSantri}
                   onChange={(e) => setEditNamaSantri(e.target.value)}
-                  className="w-full px-3.5 py-2.5 border rounded-xl focus:ring-2 focus:ring-emerald-500 focus:outline-none"
+                  className="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:outline-none font-medium text-slate-800"
                 />
               </div>
 
               <div>
-                <label className="block font-bold text-slate-700 mb-1">NISN:</label>
+                <label className="block font-bold text-slate-700 mb-1">NIS (Nomor Induk Santri):</label>
                 <input
                   type="text"
                   value={editNisnSantri}
                   onChange={(e) => setEditNisnSantri(e.target.value)}
-                  className="w-full px-3.5 py-2.5 border rounded-xl focus:ring-2 focus:ring-emerald-500 focus:outline-none font-mono"
+                  placeholder="Contoh: 20240101"
+                  className="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:outline-none font-mono text-slate-800"
                 />
               </div>
 
               <div>
-                <label className="block font-bold text-slate-700 mb-1">Kelas:</label>
-                <input
-                  type="text"
-                  required
-                  value={editKelasSantri}
-                  onChange={(e) => setEditKelasSantri(e.target.value)}
-                  className="w-full px-3.5 py-2.5 border rounded-xl focus:ring-2 focus:ring-emerald-500 focus:outline-none"
-                />
-              </div>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block font-bold text-slate-700">Kelas:</label>
+                  <button
+                    type="button"
+                    onClick={() => setIsEditCustomKelas(!isEditCustomKelas)}
+                    className="text-[11px] text-emerald-700 hover:text-emerald-800 font-bold hover:underline"
+                  >
+                    {isEditCustomKelas ? '← Pilih Dropdown' : '+ Ketik Manual'}
+                  </button>
+                </div>
 
-              <div>
-                <label className="block font-bold text-slate-700 mb-1">Halaqah:</label>
-                <input
-                  type="text"
-                  value={editHalaqahSantri}
-                  onChange={(e) => setEditHalaqahSantri(e.target.value)}
-                  className="w-full px-3.5 py-2.5 border rounded-xl focus:ring-2 focus:ring-emerald-500 focus:outline-none"
-                />
-              </div>
-
-              <div>
-                <label className="block font-bold text-slate-700 mb-1">Target Kurikulum Juz:</label>
-                <input
-                  type="text"
-                  value={editTargetJuzSantri}
-                  onChange={(e) => setEditTargetJuzSantri(e.target.value)}
-                  className="w-full px-3.5 py-2.5 border rounded-xl focus:ring-2 focus:ring-emerald-500 focus:outline-none"
-                />
+                {isEditCustomKelas ? (
+                  <input
+                    type="text"
+                    required
+                    value={editKelasSantri}
+                    onChange={(e) => setEditKelasSantri(e.target.value)}
+                    placeholder="Contoh: 1A MI atau 7B Ula"
+                    className="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:outline-none font-medium text-slate-800"
+                  />
+                ) : (
+                  <select
+                    value={editKelasSantri}
+                    onChange={(e) => {
+                      if (e.target.value === 'CUSTOM') {
+                        setIsEditCustomKelas(true);
+                      } else {
+                        setEditKelasSantri(e.target.value);
+                      }
+                    }}
+                    className="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:outline-none bg-white font-bold text-slate-800"
+                  >
+                    {editKelasSantri && !SEMUA_OPSI_KELAS.includes(editKelasSantri) && (
+                      <option value={editKelasSantri}>{editKelasSantri} (Saat ini)</option>
+                    )}
+                    <optgroup label="Tingkat MI (Madrasah Ibtidaiyah)">
+                      <option value="1 MI">Kelas 1 MI</option>
+                      <option value="2 MI">Kelas 2 MI</option>
+                      <option value="3 MI">Kelas 3 MI</option>
+                      <option value="4 MI">Kelas 4 MI</option>
+                      <option value="5 MI">Kelas 5 MI</option>
+                      <option value="6 MI">Kelas 6 MI</option>
+                    </optgroup>
+                    <optgroup label="Tingkat Ula / MTs">
+                      <option value="1 Ula / MTs">Kelas 1 Ula / MTs</option>
+                      <option value="2 Ula / MTs">Kelas 2 Ula / MTs</option>
+                      <option value="3 Ula / MTs">Kelas 3 Ula / MTs</option>
+                    </optgroup>
+                    <option value="CUSTOM">+ Tulis Kelas Manual...</option>
+                  </select>
+                )}
+                <p className="text-[10px] text-slate-400 mt-1">
+                  Pilih tingkat kelas 1 MI sampai 3 Ula/MTS.
+                </p>
               </div>
             </div>
 

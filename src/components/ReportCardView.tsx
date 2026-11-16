@@ -155,46 +155,47 @@ _Semoga ananda senantiasa istiqomah dalam menjaga dan mengamalkan kalamullah. Ba
             </p>
           </div>
 
-          <div className="flex items-center gap-2 w-full sm:w-auto">
-            {onEditPenilaian && activeRecord && (
-              <button
-                type="button"
-                onClick={() => onEditPenilaian(activeRecord)}
-                className="flex-1 sm:flex-none px-3.5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-800 border border-slate-300 text-xs font-black rounded-xl transition flex items-center justify-center gap-1.5 active:scale-95 shadow-2xs btn-tactile"
-                title="Edit nilai ujian santri ini kapanpun"
-              >
-                <Edit3 className="w-4 h-4 text-emerald-700 shrink-0" />
-                <span className="truncate">Edit Nilai</span>
-              </button>
-            )}
-
-            <button
-              onClick={handleCopyWhatsApp}
-              disabled={!activeRecord}
-              className="flex-1 sm:flex-none px-3.5 py-2.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-300 disabled:opacity-50 text-xs font-black rounded-xl transition flex items-center justify-center gap-1.5 active:scale-95 shadow-2xs btn-tactile"
-              title="Salin ringkasan rapor siap kirim via WhatsApp ke wali santri"
-            >
-
-              {copiedWA ? (
-                <>
-                  <Check className="w-4 h-4 text-emerald-700 shrink-0" />
-                  <span className="text-emerald-700 truncate">Tersalin ke WA!</span>
-                </>
-              ) : (
-                <>
-                  <Share2 className="w-4 h-4 text-emerald-700 shrink-0" />
-                  <span className="truncate">Kirim WA</span>
-                </>
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto">
+            <div className="flex items-center gap-2 w-full sm:w-auto">
+              {onEditPenilaian && activeRecord && (
+                <button
+                  type="button"
+                  onClick={() => onEditPenilaian(activeRecord)}
+                  className="flex-1 sm:flex-none px-3.5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-800 border border-slate-300 text-xs font-black rounded-xl transition flex items-center justify-center gap-1.5 active:scale-95 shadow-2xs btn-tactile"
+                  title="Edit nilai ujian santri ini"
+                >
+                  <Edit3 className="w-3.5 h-3.5 text-emerald-700 shrink-0" />
+                  <span>Edit Nilai</span>
+                </button>
               )}
-            </button>
+
+              <button
+                onClick={handleCopyWhatsApp}
+                disabled={!activeRecord}
+                className="flex-1 sm:flex-none px-3.5 py-2.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-300 disabled:opacity-50 text-xs font-black rounded-xl transition flex items-center justify-center gap-1.5 active:scale-95 shadow-2xs btn-tactile"
+                title="Salin ringkasan rapor siap kirim via WhatsApp ke wali santri"
+              >
+                {copiedWA ? (
+                  <>
+                    <Check className="w-3.5 h-3.5 text-emerald-700 shrink-0" />
+                    <span>Tersalin!</span>
+                  </>
+                ) : (
+                  <>
+                    <Share2 className="w-3.5 h-3.5 text-emerald-700 shrink-0" />
+                    <span>Kirim WA</span>
+                  </>
+                )}
+              </button>
+            </div>
 
             <button
               onClick={handlePrint}
               disabled={!activeRecord}
-              className="flex-1 sm:flex-none px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white text-xs font-black rounded-xl shadow-md transition flex items-center justify-center gap-2 active:scale-95 btn-tactile"
+              className="w-full sm:w-auto px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white text-xs font-black rounded-xl shadow-md transition flex items-center justify-center gap-2 active:scale-95 btn-tactile shrink-0"
             >
               <Printer className="w-4 h-4 shrink-0" />
-              <span className="truncate">Cetak Rapor (A4)</span>
+              <span>Cetak Rapor (A4 / PDF)</span>
             </button>
           </div>
         </div>
@@ -231,7 +232,7 @@ _Semoga ananda senantiasa istiqomah dalam menjaga dan mengamalkan kalamullah. Ba
               >
                 {searchedRecords.map(r => (
                   <option key={r.id} value={r.id}>
-                    {r.namaSantri} — {r.kelas} ({r.jenisUjian}) • Rata-rata: {r.rataRata.toFixed(1)} ({r.predikat})
+                    {r.namaSantri} ({r.kelas}) • {r.jenisUjian} • {r.rataRata.toFixed(1)} ({r.predikat})
                   </option>
                 ))}
               </select>
@@ -293,39 +294,28 @@ _Semoga ananda senantiasa istiqomah dalam menjaga dan mengamalkan kalamullah. Ba
         /* LEMBAR RAPOR RESMI (SIMULASI KERTAS A4 ELEGAN & PRINT READY) */
         <div className="bg-white rounded-3xl shadow-md border border-slate-200/90 p-4 sm:p-10 print:p-0 print:border-none print:shadow-none print:rounded-none text-slate-900 transition-all">
           
-          {/* Bismillah Header */}
-          <div className="text-center mb-3 sm:mb-4">
-            <span className="font-serif text-emerald-950 font-bold text-xl sm:text-2xl tracking-wider block">
-              بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ
-            </span>
-          </div>
-
-          {/* KOP SURAT RESMI */}
-          <div className="border-b-2 border-slate-900 pb-4 mb-5">
-            <div className="flex items-center gap-3 sm:gap-5">
-              <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-gradient-to-br from-emerald-800 to-teal-900 text-white font-black text-xl sm:text-2xl flex flex-col items-center justify-center shrink-0 border-2 border-emerald-950 shadow-xs print:border-black print:text-black print:bg-white">
-                <span>IA</span>
-                <span className="text-[7px] tracking-widest uppercase font-mono opacity-80">Tahfidz</span>
+          {/* Header Dokumen Rapor Ringkas (Menghemat ruang agar muat 1 halaman A4 penuh) */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2.5 mb-3 border-b-2 border-slate-900">
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-lg bg-emerald-900 text-white font-black text-xs flex items-center justify-center shrink-0 print:border print:border-black print:text-black print:bg-white">
+                IA
               </div>
-              <div className="flex-1 text-left min-w-0">
-                <h2 className="text-lg sm:text-2xl font-black text-slate-900 uppercase tracking-tight font-serif leading-tight">
-                  MA'HAD IBNU ABBAS
-                </h2>
-                <h3 className="text-xs sm:text-sm font-black text-emerald-800 uppercase tracking-wide leading-tight mt-0.5">
-                  {getUnitFullTitle()}
+              <div>
+                <h3 className="text-sm sm:text-base font-black uppercase text-slate-900 tracking-tight leading-none">
+                  RAPOR EVALUASI UJIAN HAFALAN AL-QUR'AN
                 </h3>
-                <p className="text-[10px] sm:text-[11px] text-slate-600 font-medium mt-1 leading-snug">
-                  Jl. Pesantren Ibnu Abbas No. 1 • Tahun Ajaran {activeRecord.tahunAjaran} • Semester {activeRecord.semester}
+                <p className="text-[10px] text-slate-500 font-medium mt-0.5">
+                  {getUnitFullTitle()} • T.A. {activeRecord.tahunAjaran} ({activeRecord.semester})
                 </p>
               </div>
             </div>
 
-            <div className="mt-3.5 pt-2.5 border-t border-slate-300 text-center">
-              <h4 className="text-sm sm:text-base font-black uppercase tracking-wider text-slate-900">
-                LEMBAR EVALUASI & RAPOR UJIAN HAFALAN AL-QUR'AN
-              </h4>
-              <span className="inline-block mt-1 px-3 py-0.5 bg-slate-100 text-slate-800 text-[10px] sm:text-[11px] font-black rounded-full uppercase tracking-wider border border-slate-200">
-                {activeRecord.jenisUjian === 'UAS' ? 'Penilaian Akhir Semester (PAS / UAS)' : 'Penilaian Tengah Semester (PTS / UTS)'}
+            <div className="flex items-center gap-2 self-start sm:self-center">
+              <span className="font-serif text-slate-700 text-xs font-bold hidden sm:inline">
+                بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ
+              </span>
+              <span className="px-2.5 py-0.5 bg-slate-100 text-slate-800 text-[10px] font-bold rounded-full uppercase tracking-wider border border-slate-200">
+                {activeRecord.jenisUjian === 'UAS' ? 'PAS / UAS' : 'PTS / UTS'}
               </span>
             </div>
           </div>
@@ -334,7 +324,7 @@ _Semoga ananda senantiasa istiqomah dalam menjaga dan mengamalkan kalamullah. Ba
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-3 p-3.5 sm:p-4 bg-slate-50/80 rounded-2xl border border-slate-200 text-xs mb-5 print:bg-slate-50">
             <div>
               <span className="text-slate-400 block text-[9px] sm:text-[10px] uppercase font-bold">Nama Santri:</span>
-              <span className="font-black text-slate-900 text-xs sm:text-sm block truncate" title={activeRecord.namaSantri}>
+              <span className="font-black text-slate-900 text-xs sm:text-sm block break-words" title={activeRecord.namaSantri}>
                 {activeRecord.namaSantri}
               </span>
             </div>
@@ -348,7 +338,7 @@ _Semoga ananda senantiasa istiqomah dalam menjaga dan mengamalkan kalamullah. Ba
             </div>
             <div>
               <span className="text-slate-400 block text-[9px] sm:text-[10px] uppercase font-bold">Penguji:</span>
-              <span className="font-bold text-slate-800 text-xs block truncate" title={activeRecord.pengujiNama}>
+              <span className="font-bold text-slate-800 text-xs block break-words" title={activeRecord.pengujiNama}>
                 {activeRecord.pengujiNama}
               </span>
             </div>

@@ -204,34 +204,43 @@ export const Navbar: React.FC<NavbarProps> = ({
             
             {/* Logo & Application Title */}
             <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
-              <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-2xl bg-gradient-to-br from-emerald-600 to-teal-700 flex items-center justify-center text-white shadow-md shadow-emerald-700/25 font-black text-base sm:text-lg tracking-tight shrink-0 border border-emerald-500/30">
+              <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-2xl bg-gradient-to-br from-emerald-700 via-emerald-800 to-teal-900 flex items-center justify-center text-white shadow-md shadow-emerald-950/20 font-black text-sm sm:text-base tracking-tight shrink-0 border border-emerald-500/30">
                 IA
               </div>
               <div className="min-w-0">
-                <div className="flex items-center gap-1.5 sm:gap-2">
-                  <h1 className="text-xs sm:text-base font-extrabold text-slate-900 tracking-tight truncate">
-                    Evaluasi Ujian Hafalan
-                  </h1>
-
-                  {/* Clickable Mobile Context Pill: Opens the Drawer directly! */}
+                {/* On mobile: Compact clean branding */}
+                <div className="md:hidden">
+                  <div className="flex items-center gap-1.5">
+                    <span className="font-black text-xs text-slate-900 tracking-tight">Ibnu Abbas</span>
+                    <span className="text-[10px] text-emerald-800 font-extrabold bg-emerald-100/90 px-1.5 py-0.2 rounded-md">Tahfidz</span>
+                  </div>
                   <button
                     type="button"
                     onClick={() => setContextDrawerOpen(true)}
-                    className="md:hidden flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-black bg-emerald-100 text-emerald-800 border border-emerald-300/80 active:scale-95 transition"
-                    title="Ubah Marhalah, Kampus, atau Penguji"
+                    className="flex items-center gap-1 text-[10px] text-slate-500 hover:text-emerald-700 font-bold mt-0.5 leading-tight group text-left"
+                    title="Ubah Sesi Ujian"
                   >
-                    <span>{marhalah === 'MI' ? 'MI' : 'Ula'} • {kampus === 'BANIN' ? 'Banin' : 'Banat'}</span>
-                    <ChevronDown className="w-3 h-3 text-emerald-700" />
+                    <span className="text-emerald-700 font-extrabold">{marhalah === 'MI' ? 'MI' : 'Ula/MTs'}</span>
+                    <span>•</span>
+                    <span>{kampus === 'BANIN' ? 'Banin (Putra)' : 'Banat (Putri)'}</span>
+                    <ChevronDown className="w-2.5 h-2.5 text-slate-400 group-hover:text-emerald-700 transition" />
                   </button>
-
-                  {/* Desktop Context Badge */}
-                  <span className="hidden md:inline-block px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-emerald-100 text-emerald-800 border border-emerald-200/80 whitespace-nowrap">
-                    {marhalah === 'MI' ? 'Madrasah Ibtidaiyah' : 'Ula / MTs'} • {kampus === 'BANIN' ? 'Banin (Putra)' : 'Banat (Putri)'}
-                  </span>
                 </div>
-                <p className="text-[10px] sm:text-[11px] text-slate-500 truncate hidden xs:block">
-                  Ma'had Ibnu Abbas • Sistem Evaluasi Terpadu
-                </p>
+
+                {/* On desktop: Full title */}
+                <div className="hidden md:block">
+                  <div className="flex items-center gap-2">
+                    <h1 className="text-base font-black text-slate-900 tracking-tight">
+                      Evaluasi Ujian Hafalan
+                    </h1>
+                    <span className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-emerald-100 text-emerald-800 border border-emerald-200/80 whitespace-nowrap">
+                      {marhalah === 'MI' ? 'Madrasah Ibtidaiyah' : 'Ula / MTs'} • {kampus === 'BANIN' ? 'Banin (Putra)' : 'Banat (Putri)'}
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-slate-500 font-medium">
+                    Ma'had Ibnu Abbas • Sistem Evaluasi Terpadu
+                  </p>
+                </div>
               </div>
             </div>
 

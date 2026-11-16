@@ -142,13 +142,13 @@ export const MasterRecapView: React.FC<MasterRecapViewProps> = ({
   return (
     <div className="max-w-6xl mx-auto p-3 sm:p-6 space-y-6">
       {/* Header & Filter Bar (No Print) */}
-      <div className="bg-white rounded-3xl shadow-sm border border-slate-200/90 p-5 no-print space-y-4">
+      <div className="card-modern rounded-3xl p-5 no-print space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
-            <span className="text-[10px] font-black uppercase tracking-wider text-emerald-700 bg-emerald-100/80 px-2.5 py-0.5 rounded-full inline-block">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-800 bg-emerald-100 px-2.5 py-0.5 rounded-full inline-block">
               Master Recap & Statistics
             </span>
-            <h2 className="text-lg font-black text-slate-900 mt-1">
+            <h2 className="text-lg font-bold tracking-tight text-slate-900 mt-1">
               Rekapitulasi Penilaian Hafalan Masal
             </h2>
             <p className="text-xs text-slate-500">
@@ -159,15 +159,15 @@ export const MasterRecapView: React.FC<MasterRecapViewProps> = ({
           <div className="flex flex-wrap items-center gap-2">
             <button
               onClick={handleExportCSV}
-              className="px-4 py-2.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 text-xs font-black rounded-xl border border-emerald-300 transition flex items-center gap-1.5 active:scale-95"
+              className="px-3.5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold rounded-xl border border-slate-200 transition flex items-center gap-1.5 active:scale-95 btn-tactile"
               title="Unduh file Excel (.csv) siap olah"
             >
-              <Download className="w-3.5 h-3.5" />
+              <Download className="w-3.5 h-3.5 text-slate-600" />
               <span>Export Excel (CSV)</span>
             </button>
             <button
               onClick={handlePrint}
-              className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black rounded-xl shadow-md transition flex items-center gap-2 active:scale-95"
+              className="px-4 py-2.5 bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold rounded-xl shadow-xs transition flex items-center gap-2 active:scale-95 btn-tactile"
             >
               <Printer className="w-3.5 h-3.5" />
               <span>Cetak Rekap (A4)</span>
@@ -178,16 +178,16 @@ export const MasterRecapView: React.FC<MasterRecapViewProps> = ({
         {/* Filters */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-3 border-t border-slate-100">
           <div>
-            <label className="block text-[10px] font-black uppercase tracking-wider text-slate-600 mb-1">
+            <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1">
               Jenis Ujian:
             </label>
             <div className="flex gap-2">
               <button
                 type="button"
                 onClick={() => setFilterJenisUjian('UTS')}
-                className={`flex-1 py-2 rounded-xl text-xs font-black border transition ${
+                className={`flex-1 py-2 rounded-xl text-xs font-bold border transition ${
                   filterJenisUjian === 'UTS'
-                    ? 'bg-emerald-600 text-white border-emerald-700 shadow-xs'
+                    ? 'bg-emerald-700 text-white border-emerald-800 shadow-xs'
                     : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
                 }`}
               >
@@ -196,9 +196,9 @@ export const MasterRecapView: React.FC<MasterRecapViewProps> = ({
               <button
                 type="button"
                 onClick={() => setFilterJenisUjian('UAS')}
-                className={`flex-1 py-2 rounded-xl text-xs font-black border transition ${
+                className={`flex-1 py-2 rounded-xl text-xs font-bold border transition ${
                   filterJenisUjian === 'UAS'
-                    ? 'bg-emerald-600 text-white border-emerald-700 shadow-xs'
+                    ? 'bg-emerald-700 text-white border-emerald-800 shadow-xs'
                     : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
                 }`}
               >
@@ -208,7 +208,7 @@ export const MasterRecapView: React.FC<MasterRecapViewProps> = ({
           </div>
 
           <div>
-            <label className="block text-[10px] font-black uppercase tracking-wider text-slate-600 mb-1">
+            <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1">
               Filter Kelas:
             </label>
             <select
@@ -224,7 +224,7 @@ export const MasterRecapView: React.FC<MasterRecapViewProps> = ({
           </div>
 
           <div>
-            <label className="block text-[10px] font-black uppercase tracking-wider text-slate-600 mb-1">
+            <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1">
               Cari Nama Santri:
             </label>
             <div className="relative">
@@ -243,37 +243,37 @@ export const MasterRecapView: React.FC<MasterRecapViewProps> = ({
 
       {/* KPI Cards (No Print) */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 no-print">
-        <div className="bg-white p-4 rounded-2xl border border-slate-200/90 shadow-2xs">
+        <div className="card-modern p-4 rounded-2xl">
           <div className="flex items-center justify-between text-slate-400">
-            <span className="text-[10px] font-black uppercase">Santri Teruji</span>
+            <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">Santri Teruji</span>
             <Users className="w-4 h-4 text-slate-400" />
           </div>
-          <span className="text-2xl font-black text-slate-900 mt-1 block">{stats.count} Santri</span>
+          <span className="text-2xl font-bold tracking-tight text-slate-900 mt-1 block">{stats.count} Santri</span>
         </div>
 
-        <div className="bg-white p-4 rounded-2xl border border-slate-200/90 shadow-2xs">
+        <div className="card-modern p-4 rounded-2xl">
           <div className="flex items-center justify-between text-slate-400">
-            <span className="text-[10px] font-black uppercase">Status Selesai</span>
+            <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">Status Selesai</span>
             <CheckCircle2 className="w-4 h-4 text-emerald-600" />
           </div>
-          <span className="text-2xl font-black text-emerald-700 mt-1 block">{stats.selesai} Selesai</span>
-          <span className="text-[10px] text-amber-700 font-bold block mt-0.5">{stats.draft} Cicilan Masih Draft</span>
+          <span className="text-2xl font-bold tracking-tight text-emerald-700 mt-1 block">{stats.selesai} Selesai</span>
+          <span className="text-[10px] text-amber-700 font-medium block mt-0.5">{stats.draft} Cicilan Masih Draft</span>
         </div>
 
-        <div className="bg-white p-4 rounded-2xl border border-slate-200/90 shadow-2xs">
+        <div className="card-modern p-4 rounded-2xl">
           <div className="flex items-center justify-between text-slate-400">
-            <span className="text-[10px] font-black uppercase">Rata-Rata Angkatan</span>
+            <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">Rata-Rata Angkatan</span>
             <TrendingUp className="w-4 h-4 text-blue-600" />
           </div>
-          <span className="text-2xl font-black text-slate-900 mt-1 block font-mono">{stats.avg}</span>
+          <span className="text-2xl font-bold tracking-tight text-slate-900 mt-1 block font-mono">{stats.avg}</span>
         </div>
 
-        <div className="bg-white p-4 rounded-2xl border border-slate-200/90 shadow-2xs">
+        <div className="card-modern p-4 rounded-2xl">
           <div className="flex items-center justify-between text-slate-400">
-            <span className="text-[10px] font-black uppercase">Tingkat Lulus Baik+</span>
+            <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">Tingkat Lulus Baik+</span>
             <Award className="w-4 h-4 text-teal-600" />
           </div>
-          <span className="text-2xl font-black text-teal-700 mt-1 block font-mono">{stats.passRate}%</span>
+          <span className="text-2xl font-bold tracking-tight text-teal-700 mt-1 block font-mono">{stats.passRate}%</span>
         </div>
       </div>
 

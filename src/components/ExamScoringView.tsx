@@ -512,7 +512,7 @@ export const ExamScoringView: React.FC<ExamScoringViewProps> = ({
                   Tentukan santri yang akan diuji, jenis evaluasi, serta cakupan juz hafalan.
                 </p>
               </div>
-              <div className="bg-white/80 p-2.5 rounded-xl border border-emerald-100 shrink-0 text-left sm:text-right">
+              <div className="hidden sm:block bg-white/80 p-2.5 rounded-xl border border-emerald-100 shrink-0 text-right">
                 <span className="text-[10px] text-slate-400 block uppercase font-bold">Unit Ujian:</span>
                 <span className="text-xs font-extrabold text-emerald-950">
                   {marhalah === 'MI' ? 'Madrasah Ibtidaiyah' : 'Ula / MTs'} • {kampus === 'BANIN' ? 'Banin' : 'Banat'}
@@ -521,19 +521,19 @@ export const ExamScoringView: React.FC<ExamScoringViewProps> = ({
             </div>
           </div>
 
-          <div className="p-5 sm:p-6 space-y-6">
+          <div className="p-4 sm:p-6 space-y-5">
             {/* 1. Penguji yang Menyimak */}
-            <div className="bg-emerald-50/60 p-4 rounded-2xl border border-emerald-200/80 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="bg-slate-50/90 p-3.5 sm:p-4 rounded-2xl border border-slate-200/90 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-2xs">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-emerald-600 text-white flex items-center justify-center font-bold text-xs shrink-0 shadow-xs">
+                <div className="w-9 h-9 rounded-xl bg-emerald-100 text-emerald-800 flex items-center justify-center font-black text-xs shrink-0 border border-emerald-200">
                   Ust
                 </div>
                 <div>
-                  <label className="block text-xs font-black uppercase text-emerald-950 tracking-wider">
+                  <label className="block text-[11px] font-black uppercase text-slate-500 tracking-wider">
                     Asatidz / Penguji yang Menyimak:
                   </label>
-                  <p className="text-[11px] text-emerald-700">
-                    Nilai resmi santri akan terdata disimak dan diuji oleh penguji ini.
+                  <p className="text-xs font-bold text-slate-900 mt-0.5">
+                    {selectedPenguji || activePengujiNama || 'Ust. Penguji'}
                   </p>
                 </div>
               </div>
@@ -542,7 +542,7 @@ export const ExamScoringView: React.FC<ExamScoringViewProps> = ({
                 <select
                   value={selectedPenguji}
                   onChange={(e) => setSelectedPenguji(e.target.value)}
-                  className="w-full sm:w-auto px-3.5 py-2.5 rounded-xl border border-emerald-300 bg-white text-xs font-extrabold text-slate-800 focus:ring-2 focus:ring-emerald-500 shadow-xs cursor-pointer"
+                  className="w-full sm:w-auto px-3.5 py-2 rounded-xl border border-slate-300 bg-white text-xs font-extrabold text-slate-800 focus:ring-2 focus:ring-emerald-500 shadow-2xs cursor-pointer"
                 >
                   {pengujiList.length > 0 ? (
                     pengujiList.map(p => (
@@ -666,19 +666,24 @@ export const ExamScoringView: React.FC<ExamScoringViewProps> = ({
 
               {/* Selected Santri Detail Preview Card */}
               {currentSantri && (
-                <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200/90 text-xs grid grid-cols-2 sm:grid-cols-3 gap-3 mt-2">
-                  <div>
-                    <span className="text-slate-400 block text-[10px] font-bold uppercase">Santri Terpilih:</span>
-                    <span className="font-extrabold text-slate-900 text-sm truncate block">{currentSantri.nama}</span>
+                <div className="p-3.5 sm:p-4 rounded-2xl bg-gradient-to-r from-emerald-50/80 via-white to-emerald-50/40 border border-emerald-200/90 shadow-2xs mt-2 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-2xl bg-gradient-to-br from-emerald-700 to-teal-800 text-white font-black text-sm flex items-center justify-center shrink-0 shadow-xs">
+                      {currentSantri.nama.charAt(0)}
+                    </div>
+                    <div className="min-w-0">
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-800 block">Santri Terpilih:</span>
+                      <h4 className="font-black text-sm sm:text-base text-slate-900 truncate">{currentSantri.nama}</h4>
+                      <div className="flex items-center gap-2 mt-0.5 text-xs text-slate-500">
+                        <span className="font-mono font-bold text-slate-700">NIS: {currentSantri.nisn}</span>
+                        <span>•</span>
+                        <span className="font-extrabold text-emerald-800">{currentSantri.kelas}</span>
+                      </div>
+                    </div>
                   </div>
-                  <div>
-                    <span className="text-slate-400 block text-[10px] font-bold uppercase">NIS:</span>
-                    <span className="font-mono font-bold text-slate-800 text-sm">{currentSantri.nisn}</span>
-                  </div>
-                  <div>
-                    <span className="text-slate-400 block text-[10px] font-bold uppercase">Kelas / Jenjang:</span>
-                    <span className="inline-block mt-0.5 px-2.5 py-0.5 rounded-lg font-extrabold bg-emerald-100 text-emerald-800 text-xs border border-emerald-200">
-                      {currentSantri.kelas}
+                  <div className="flex items-center gap-2 self-end sm:self-auto shrink-0">
+                    <span className="px-2.5 py-1 rounded-xl bg-emerald-100 text-emerald-800 font-extrabold text-xs border border-emerald-200">
+                      {currentSantri.targetJuz || 'Juz 30'}
                     </span>
                   </div>
                 </div>
@@ -997,14 +1002,14 @@ export const ExamScoringView: React.FC<ExamScoringViewProps> = ({
 
             {/* Input Counter SB, SK, Tahsin */}
             <div className="p-4 sm:p-6 space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5 sm:gap-4">
                 {/* 1. Salah Besar (SB) */}
-                <div className="p-4 rounded-2xl border-2 border-red-200 bg-red-50/40 space-y-2">
+                <div className="p-4 rounded-2xl bg-white border border-slate-200/80 shadow-xs hover:border-slate-300 transition-all space-y-2">
                   <div className="flex items-center justify-between">
-                    <span className="text-xs font-black text-red-950 uppercase tracking-wider">
+                    <span className="text-xs font-bold text-slate-900 uppercase tracking-wider">
                       Salah Besar (SB)
                     </span>
-                    <span className="text-[10px] font-extrabold text-red-700 bg-red-100 px-2 py-0.5 rounded-full">
+                    <span className="text-[10px] font-bold text-rose-700 bg-rose-50 border border-rose-200/80 px-2 py-0.5 rounded-full">
                       -1.0 per salah
                     </span>
                   </div>
@@ -1012,22 +1017,26 @@ export const ExamScoringView: React.FC<ExamScoringViewProps> = ({
                     Lupa ayat, tertukar baris/ayat, atau harakat fatal yang mengubah makna.
                   </p>
 
-                  <div className="flex items-center justify-between bg-white rounded-2xl border border-red-200 overflow-hidden shadow-2xs mt-2">
+                  <div className="flex items-center justify-between bg-slate-50/70 rounded-2xl p-1.5 border border-slate-200/70 mt-3">
                     <button
                       type="button"
                       onClick={() => updateScore(currentSoalIndex, 'sb', -1)}
-                      className="min-w-[48px] min-h-[48px] text-xl font-black text-slate-600 hover:bg-red-100 hover:text-red-700 btn-tactile active:scale-75 flex items-center justify-center select-none"
+                      className="w-12 h-12 rounded-xl bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 text-lg font-bold flex items-center justify-center shadow-2xs btn-tactile active:scale-90"
                       aria-label="Kurangi Salah Besar"
                     >
-                      -
+                      −
                     </button>
-                    <span key={currentSoal.sb} className="text-2xl font-black text-red-700 font-mono animate-pop inline-block">
-                      {currentSoal.sb}
-                    </span>
+                    <div className="text-center px-4">
+                      <span key={currentSoal.sb} className={`text-3xl font-black font-mono tracking-tight animate-pop inline-block ${
+                        currentSoal.sb > 0 ? 'text-rose-600' : 'text-slate-800'
+                      }`}>
+                        {currentSoal.sb}
+                      </span>
+                    </div>
                     <button
                       type="button"
                       onClick={() => updateScore(currentSoalIndex, 'sb', +1)}
-                      className="min-w-[48px] min-h-[48px] text-xl font-black text-slate-600 hover:bg-red-100 hover:text-red-700 btn-tactile active:scale-75 flex items-center justify-center select-none"
+                      className="w-12 h-12 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-lg font-bold flex items-center justify-center shadow-xs btn-tactile active:scale-90"
                       aria-label="Tambah Salah Besar"
                     >
                       +
@@ -1036,12 +1045,12 @@ export const ExamScoringView: React.FC<ExamScoringViewProps> = ({
                 </div>
 
                 {/* 2. Salah Kecil (SK) */}
-                <div className="p-4 rounded-2xl border-2 border-amber-200 bg-amber-50/40 space-y-2 card-lift">
+                <div className="p-4 rounded-2xl bg-white border border-slate-200/80 shadow-xs hover:border-slate-300 transition-all space-y-2">
                   <div className="flex items-center justify-between">
-                    <span className="text-xs font-black text-amber-950 uppercase tracking-wider">
+                    <span className="text-xs font-bold text-slate-900 uppercase tracking-wider">
                       Salah Kecil (SK)
                     </span>
-                    <span className="text-[10px] font-extrabold text-amber-800 bg-amber-100 px-2 py-0.5 rounded-full">
+                    <span className="text-[10px] font-bold text-amber-700 bg-amber-50 border border-amber-200/80 px-2 py-0.5 rounded-full">
                       -0.2 (5 SK = 1 SB)
                     </span>
                   </div>
@@ -1049,22 +1058,26 @@ export const ExamScoringView: React.FC<ExamScoringViewProps> = ({
                     Ragu sejenak lalu membetulkan sendiri, atau tajwid ringan.
                   </p>
 
-                  <div className="flex items-center justify-between bg-white rounded-2xl border border-amber-200 overflow-hidden shadow-2xs mt-2">
+                  <div className="flex items-center justify-between bg-slate-50/70 rounded-2xl p-1.5 border border-slate-200/70 mt-3">
                     <button
                       type="button"
                       onClick={() => updateScore(currentSoalIndex, 'sk', -1)}
-                      className="min-w-[48px] min-h-[48px] text-xl font-black text-slate-600 hover:bg-amber-100 hover:text-amber-700 btn-tactile active:scale-75 flex items-center justify-center select-none"
+                      className="w-12 h-12 rounded-xl bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 text-lg font-bold flex items-center justify-center shadow-2xs btn-tactile active:scale-90"
                       aria-label="Kurangi Salah Kecil"
                     >
-                      -
+                      −
                     </button>
-                    <span key={currentSoal.sk} className="text-2xl font-black text-amber-700 font-mono animate-pop inline-block">
-                      {currentSoal.sk}
-                    </span>
+                    <div className="text-center px-4">
+                      <span key={currentSoal.sk} className={`text-3xl font-black font-mono tracking-tight animate-pop inline-block ${
+                        currentSoal.sk > 0 ? 'text-amber-600' : 'text-slate-800'
+                      }`}>
+                        {currentSoal.sk}
+                      </span>
+                    </div>
                     <button
                       type="button"
                       onClick={() => updateScore(currentSoalIndex, 'sk', +1)}
-                      className="min-w-[48px] min-h-[48px] text-xl font-black text-slate-600 hover:bg-amber-100 hover:text-amber-700 btn-tactile active:scale-75 flex items-center justify-center select-none"
+                      className="w-12 h-12 rounded-xl bg-amber-600 hover:bg-amber-700 text-white text-lg font-bold flex items-center justify-center shadow-xs btn-tactile active:scale-90"
                       aria-label="Tambah Salah Kecil"
                     >
                       +
@@ -1073,12 +1086,12 @@ export const ExamScoringView: React.FC<ExamScoringViewProps> = ({
                 </div>
 
                 {/* 3. Tahsin / Tajwid (0-6) */}
-                <div className="p-4 rounded-2xl border-2 border-indigo-200 bg-indigo-50/40 space-y-2 card-lift">
+                <div className="p-4 rounded-2xl bg-white border border-slate-200/80 shadow-xs hover:border-slate-300 transition-all space-y-2">
                   <div className="flex items-center justify-between">
-                    <span className="text-xs font-black text-indigo-950 uppercase tracking-wider">
+                    <span className="text-xs font-bold text-slate-900 uppercase tracking-wider">
                       Tahsin / Tajwid
                     </span>
-                    <span className="text-[10px] font-extrabold text-indigo-800 bg-indigo-100 px-2 py-0.5 rounded-full">
+                    <span className="text-[10px] font-bold text-emerald-800 bg-emerald-50 border border-emerald-200/80 px-2 py-0.5 rounded-full">
                       Skor 0 s.d. 6
                     </span>
                   </div>
@@ -1086,22 +1099,24 @@ export const ExamScoringView: React.FC<ExamScoringViewProps> = ({
                     Makhraj huruf, sifat huruf, kelancaran tartil sesuai kaidah.
                   </p>
 
-                  <div className="flex items-center justify-between bg-white rounded-2xl border border-indigo-200 overflow-hidden shadow-2xs mt-2">
+                  <div className="flex items-center justify-between bg-slate-50/70 rounded-2xl p-1.5 border border-slate-200/70 mt-3">
                     <button
                       type="button"
                       onClick={() => updateScore(currentSoalIndex, 'tahsin', -1)}
-                      className="min-w-[48px] min-h-[48px] text-xl font-black text-slate-600 hover:bg-indigo-100 hover:text-indigo-700 btn-tactile active:scale-75 flex items-center justify-center select-none"
+                      className="w-12 h-12 rounded-xl bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 text-lg font-bold flex items-center justify-center shadow-2xs btn-tactile active:scale-90"
                       aria-label="Kurangi Skor Tahsin"
                     >
-                      -
+                      −
                     </button>
-                    <span key={currentSoal.tahsin} className="text-2xl font-black text-indigo-700 font-mono animate-pop inline-block">
-                      {currentSoal.tahsin}
-                    </span>
+                    <div className="text-center px-4">
+                      <span key={currentSoal.tahsin} className="text-3xl font-black font-mono tracking-tight text-emerald-800 animate-pop inline-block">
+                        {currentSoal.tahsin}
+                      </span>
+                    </div>
                     <button
                       type="button"
                       onClick={() => updateScore(currentSoalIndex, 'tahsin', +1)}
-                      className="min-w-[48px] min-h-[48px] text-xl font-black text-slate-600 hover:bg-indigo-100 hover:text-indigo-700 btn-tactile active:scale-75 flex items-center justify-center select-none"
+                      className="w-12 h-12 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white text-lg font-bold flex items-center justify-center shadow-xs btn-tactile active:scale-90"
                       aria-label="Tambah Skor Tahsin"
                     >
                       +
@@ -1111,7 +1126,7 @@ export const ExamScoringView: React.FC<ExamScoringViewProps> = ({
               </div>
 
               {/* Tombol Navigasi Soal (Diposisikan langsung di bawah input skor) */}
-              <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-2">
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-2.5 pt-2">
                 <button
                   type="button"
                   onClick={() => {
@@ -1119,9 +1134,9 @@ export const ExamScoringView: React.FC<ExamScoringViewProps> = ({
                     setCurrentStep(prev => Math.max(1, prev - 1));
                   }}
                   disabled={currentStep === 1}
-                  className="w-full sm:w-auto px-5 py-3 rounded-2xl border border-slate-300 text-slate-700 text-xs font-black hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2 active:scale-95"
+                  className="w-full sm:w-auto px-5 py-3 rounded-xl border border-slate-200 text-slate-700 text-xs font-bold hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2 active:scale-95 btn-tactile"
                 >
-                  <ArrowLeft className="w-4 h-4" />
+                  <ArrowLeft className="w-4 h-4 text-slate-500" />
                   <span>Sebelumnya</span>
                 </button>
 
@@ -1129,9 +1144,9 @@ export const ExamScoringView: React.FC<ExamScoringViewProps> = ({
                 <button
                   type="button"
                   onClick={handleSaveProgress}
-                  className="w-full sm:w-auto px-5 py-3 bg-amber-500 hover:bg-amber-600 text-white rounded-2xl text-xs font-black shadow-xs transition flex items-center justify-center gap-2 active:scale-95"
+                  className="w-full sm:w-auto px-5 py-3 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 rounded-xl text-xs font-bold shadow-2xs transition flex items-center justify-center gap-2 active:scale-95 btn-tactile"
                 >
-                  <Save className="w-4 h-4" />
+                  <Save className="w-4 h-4 text-amber-700" />
                   <span>Simpan Progress (Cicilan)</span>
                 </button>
 
@@ -1141,7 +1156,7 @@ export const ExamScoringView: React.FC<ExamScoringViewProps> = ({
                     triggerHaptic('light');
                     setCurrentStep(prev => prev + 1);
                   }}
-                  className="w-full sm:w-auto px-7 py-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl text-xs font-black shadow-sm transition flex items-center justify-center gap-2 active:scale-95"
+                  className="w-full sm:w-auto px-6 py-3 bg-emerald-700 hover:bg-emerald-800 text-white rounded-xl text-xs font-bold shadow-md shadow-emerald-950/15 transition flex items-center justify-center gap-2 active:scale-95 btn-tactile"
                 >
                   <span>{currentStep === totalQuestions ? 'Review Seluruh Nilai' : 'Soal Selanjutnya'}</span>
                   <ArrowRight className="w-4 h-4" />
@@ -1149,28 +1164,28 @@ export const ExamScoringView: React.FC<ExamScoringViewProps> = ({
               </div>
 
               {/* Rincian Live Calculation Soal Ini (Hasil Sementara) */}
-              <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200/90 grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+              <div className="bg-slate-50/80 p-3.5 sm:p-4 rounded-2xl border border-slate-200/80 grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
                 <div>
-                  <span className="text-slate-400 block text-[10px] font-bold uppercase">KBE (SB + SK/5):</span>
-                  <span className="font-black text-slate-800 text-sm font-mono">
+                  <span className="text-slate-400 block text-[10px] font-bold uppercase tracking-wider">KBE (SB + SK/5):</span>
+                  <span className="font-bold text-slate-800 text-sm font-mono mt-0.5 block">
                     {currentSoal.kbe.toFixed(2)}
                   </span>
                 </div>
                 <div>
-                  <span className="text-slate-400 block text-[10px] font-bold uppercase">Nilai Dasar (Min 50):</span>
-                  <span className="font-black text-slate-800 text-sm font-mono">
+                  <span className="text-slate-400 block text-[10px] font-bold uppercase tracking-wider">Nilai Dasar:</span>
+                  <span className="font-bold text-slate-800 text-sm font-mono mt-0.5 block">
                     {currentSoal.nilaiDasar.toFixed(1)}
                   </span>
                 </div>
                 <div>
-                  <span className="text-slate-400 block text-[10px] font-bold uppercase">Bonus Tahsin:</span>
-                  <span className="font-black text-emerald-700 text-sm font-mono">
+                  <span className="text-slate-400 block text-[10px] font-bold uppercase tracking-wider">Bonus Tahsin:</span>
+                  <span className="font-bold text-emerald-800 text-sm font-mono mt-0.5 block">
                     +{currentSoal.bonusTahsin}
                   </span>
                 </div>
                 <div>
-                  <span className="text-slate-400 block text-[10px] font-bold uppercase">Predikat Soal:</span>
-                  <span className="font-black text-emerald-800 text-sm">
+                  <span className="text-slate-400 block text-[10px] font-bold uppercase tracking-wider">Predikat Soal:</span>
+                  <span className="font-bold text-emerald-900 text-sm mt-0.5 block">
                     {getPredikat(currentSoal.nilaiAkhirSoal)}
                   </span>
                 </div>

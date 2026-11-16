@@ -505,18 +505,18 @@ export const MasterDataView: React.FC<MasterDataViewProps> = ({
   return (
     <div className="max-w-6xl mx-auto p-3 sm:p-6 space-y-5">
       {/* Header & Sub-Tab Bar */}
-      <div className="bg-white rounded-3xl shadow-sm border border-slate-200/90 p-4 sm:p-6 space-y-4">
+      <div className="card-modern rounded-3xl p-4 sm:p-6 space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
             <div className="flex items-center gap-2">
-              <span className="text-[10px] font-black uppercase tracking-wider text-emerald-800 bg-emerald-100 px-2.5 py-0.5 rounded-full inline-block">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-800 bg-emerald-100 px-2.5 py-0.5 rounded-full inline-block">
                 Master Database
               </span>
-              <span className="text-xs font-bold text-slate-500">
+              <span className="text-xs font-medium text-slate-500">
                 {marhalah === 'MI' ? 'Madrasah Ibtidaiyah' : 'Ula / MTs'} • {kampus === 'BANIN' ? 'Kampus Banin (Putra)' : 'Kampus Banat (Putri)'}
               </span>
             </div>
-            <h2 className="text-lg sm:text-xl font-black text-slate-900 mt-1">
+            <h2 className="text-lg sm:text-xl font-bold tracking-tight text-slate-900 mt-1">
               Pusat Manajemen Data & Petugas Ujian
             </h2>
             <p className="text-xs text-slate-500">
@@ -531,15 +531,15 @@ export const MasterDataView: React.FC<MasterDataViewProps> = ({
                 <button
                   type="button"
                   onClick={() => setShowImportModal(true)}
-                  className="flex-1 sm:flex-none px-3.5 py-2.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 text-xs font-black rounded-xl border border-emerald-300 transition flex items-center justify-center gap-1.5 active:scale-95 btn-tactile"
+                  className="flex-1 sm:flex-none px-3.5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold rounded-xl border border-slate-200 transition flex items-center justify-center gap-1.5 active:scale-95 btn-tactile"
                 >
-                  <Upload className="w-3.5 h-3.5 text-emerald-700 shrink-0" />
+                  <Upload className="w-3.5 h-3.5 text-slate-600 shrink-0" />
                   <span className="truncate">Import CSV</span>
                 </button>
                 <button
                   type="button"
                   onClick={() => setShowAddSantriModal(true)}
-                  className="flex-1 sm:flex-none px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black rounded-xl shadow-md transition flex items-center justify-center gap-1.5 active:scale-95 btn-tactile"
+                  className="flex-1 sm:flex-none px-4 py-2.5 bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold rounded-xl shadow-xs transition flex items-center justify-center gap-1.5 active:scale-95 btn-tactile"
                 >
                   <Plus className="w-3.5 h-3.5 shrink-0" />
                   <span className="truncate">Tambah Santri</span>
@@ -552,18 +552,18 @@ export const MasterDataView: React.FC<MasterDataViewProps> = ({
                 <button
                   type="button"
                   onClick={() => setShowImportPengajarModal(true)}
-                  className="flex-1 sm:flex-none px-3.5 py-2.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 text-xs font-black rounded-xl border border-emerald-300 transition flex items-center justify-center gap-1.5 active:scale-95 btn-tactile"
+                  className="flex-1 sm:flex-none px-3.5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold rounded-xl border border-slate-200 transition flex items-center justify-center gap-1.5 active:scale-95 btn-tactile"
                 >
-                  <Upload className="w-3.5 h-3.5 text-emerald-700 shrink-0" />
+                  <Upload className="w-3.5 h-3.5 text-slate-600 shrink-0" />
                   <span className="truncate">Import CSV Asatidz</span>
                 </button>
                 <button
                   type="button"
                   onClick={() => setShowAddPengajarModal(true)}
-                  className="flex-1 sm:flex-none px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black rounded-xl shadow-md transition flex items-center justify-center gap-1.5 active:scale-95 btn-tactile"
+                  className="flex-1 sm:flex-none px-4 py-2.5 bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold rounded-xl shadow-xs transition flex items-center justify-center gap-1.5 active:scale-95 btn-tactile"
                 >
                   <Plus className="w-3.5 h-3.5 shrink-0" />
-                  <span className="truncate">Tambah Pengajar Baru</span>
+                  <span className="truncate">Tambah Pengajar</span>
                 </button>
               </>
             )}
@@ -576,9 +576,9 @@ export const MasterDataView: React.FC<MasterDataViewProps> = ({
           <button
             type="button"
             onClick={() => setSubTab('santri')}
-            className={`py-2 sm:py-2.5 px-2 rounded-xl text-xs font-black transition-all flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 ${
+            className={`py-2 sm:py-2.5 px-2 rounded-xl text-xs font-bold transition-all flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 ${
               subTab === 'santri'
-                ? 'bg-white text-emerald-800 shadow-sm'
+                ? 'bg-white text-emerald-900 shadow-xs'
                 : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/50'
             }`}
           >
@@ -594,9 +594,9 @@ export const MasterDataView: React.FC<MasterDataViewProps> = ({
           <button
             type="button"
             onClick={() => setSubTab('pengajar')}
-            className={`py-2 sm:py-2.5 px-2 rounded-xl text-xs font-black transition-all flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 ${
+            className={`py-2 sm:py-2.5 px-2 rounded-xl text-xs font-bold transition-all flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 ${
               subTab === 'pengajar'
-                ? 'bg-white text-emerald-800 shadow-sm'
+                ? 'bg-white text-emerald-900 shadow-xs'
                 : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/50'
             }`}
           >
@@ -612,9 +612,9 @@ export const MasterDataView: React.FC<MasterDataViewProps> = ({
           <button
             type="button"
             onClick={() => setSubTab('penguji')}
-            className={`py-2 sm:py-2.5 px-2 rounded-xl text-xs font-black transition-all flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 ${
+            className={`py-2 sm:py-2.5 px-2 rounded-xl text-xs font-bold transition-all flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 ${
               subTab === 'penguji'
-                ? 'bg-white text-emerald-800 shadow-sm'
+                ? 'bg-white text-emerald-900 shadow-xs'
                 : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/50'
             }`}
           >

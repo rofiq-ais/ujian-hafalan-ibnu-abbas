@@ -22,7 +22,9 @@ import {
   HelpCircle,
   TrendingUp,
   User,
-  Eye
+  Eye,
+  Home,
+  Users
 } from 'lucide-react';
 import { PengujiItem } from '../services/api';
 import { triggerHaptic } from '../utils/haptics';
@@ -330,7 +332,7 @@ export const ExamScoringView: React.FC<ExamScoringViewProps> = ({
   const currentSoal = soalList[currentSoalIndex];
 
   // Save Progress (Cicilan)
-  const handleSaveProgress = () => {
+  const handleSaveProgress = (returnToHome: boolean = false) => {
     if (!currentSantri) return;
 
     const agregat = hitungAgregatUjian(soalList, jenisUjian === 'UAS', selectedJuz);
@@ -362,9 +364,15 @@ export const ExamScoringView: React.FC<ExamScoringViewProps> = ({
     triggerHaptic('success');
     setToastMessage({
       title: 'Progress Cicilan Tersimpan!',
-      desc: `Nilai hingga Soal ${currentStep} (${currentSoal?.juzLabel || 'UTS'}) aman tersimpan. Anda atau asatidz lain dapat melanjutkan kapan saja.`,
+      desc: returnToHome
+        ? `Nilai ${currentSantri.nama} hingga Soal ${currentStep} aman tersimpan. Silakan pilih santri berikutnya untuk diuji.`
+        : `Nilai hingga Soal ${currentStep} (${currentSoal?.juzLabel || 'UTS'}) aman tersimpan. Anda atau asatidz lain dapat melanjutkan kapan saja.`,
       type: 'success'
     });
+
+    if (returnToHome) {
+      setCurrentStep(0);
+    }
   };
 
   // Final Submit
@@ -451,20 +459,48 @@ export const ExamScoringView: React.FC<ExamScoringViewProps> = ({
 
       {/* STEP INDICATOR BREADCRUMB */}
       <div className="bg-white rounded-2xl p-3 sm:p-4 border border-slate-200/80 shadow-2xs flex items-center justify-between gap-2 overflow-x-auto">
-        <div className="flex items-center gap-2 sm:gap-3">
+        <button
+          type="button"
+          onClick={() => {
+            triggerHaptic('light');
+            setCurrentStep(0);
+          }}
+          className={`flex items-center gap-2 sm:gap-3 p-1 rounded-xl transition-all ${
+            currentStep === 0
+              ? 'cursor-default'
+              : 'hover:bg-slate-100/90 active:scale-95 cursor-pointer text-slate-700'
+          }`}
+          title="Klik untuk kembali ke Persiapan Ujian & Ganti Santri"
+        >
           <div className={`w-7 h-7 rounded-xl flex items-center justify-center font-black text-xs transition-all ${
             currentStep === 0 ? 'bg-emerald-600 text-white shadow-xs' : 'bg-emerald-100 text-emerald-800'
           }`}>
-            1
+            <Home className="w-3.5 h-3.5" />
           </div>
-          <span className={`text-xs font-bold ${currentStep === 0 ? 'text-slate-900' : 'text-slate-500'}`}>
+          <span className={`text-xs font-bold ${currentStep === 0 ? 'text-slate-900' : 'text-slate-600 hover:text-slate-900'}`}>
             Persiapan Ujian
           </span>
-        </div>
+        </button>
 
         <div className="w-6 sm:w-12 h-0.5 bg-slate-200"></div>
 
-        <div className="flex items-center gap-2 sm:gap-3">
+        <button
+          type="button"
+          onClick={() => {
+            if (currentStep > totalQuestions) {
+              triggerHaptic('light');
+              setCurrentStep(totalQuestions);
+            }
+          }}
+          className={`flex items-center gap-2 sm:gap-3 p-1 rounded-xl transition-all ${
+            currentStep >= 1 && currentStep <= totalQuestions
+              ? 'cursor-default'
+              : currentStep > totalQuestions
+              ? 'hover:bg-slate-100/90 active:scale-95 cursor-pointer text-slate-700'
+              : 'cursor-default text-slate-400'
+          }`}
+          title="Penilaian Butir Soal"
+        >
           <div className={`w-7 h-7 rounded-xl flex items-center justify-center font-black text-xs transition-all ${
             currentStep >= 1 && currentStep <= totalQuestions
               ? 'bg-emerald-600 text-white shadow-xs'
@@ -479,11 +515,11 @@ export const ExamScoringView: React.FC<ExamScoringViewProps> = ({
           }`}>
             Penilaian Soal
           </span>
-        </div>
+        </button>
 
         <div className="w-6 sm:w-12 h-0.5 bg-slate-200"></div>
 
-        <div className="flex items-center gap-2 sm:gap-3">
+        <div className="flex items-center gap-2 sm:gap-3 p-1">
           <div className={`w-7 h-7 rounded-xl flex items-center justify-center font-black text-xs transition-all ${
             currentStep > totalQuestions ? 'bg-emerald-600 text-white shadow-xs' : 'bg-slate-100 text-slate-400'
           }`}>
@@ -881,22 +917,28 @@ export const ExamScoringView: React.FC<ExamScoringViewProps> = ({
                 </h3>
               </div>
 
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
                 <button
                   type="button"
-                  onClick={() => setCurrentStep(0)}
-                  className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition active:scale-95"
+                  onClick={() => {
+                    triggerHaptic('light');
+                    setCurrentStep(0);
+                  }}
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition active:scale-95 btn-tactile border border-slate-200"
+                  title="Kembali ke Beranda / Persiapan Ujian untuk pilih santri lain"
                 >
-                  Pengaturan
+                  <Home className="w-3.5 h-3.5 text-slate-600" />
+                  <span>Beranda / Ganti Santri</span>
                 </button>
+
                 <button
                   type="button"
-                  onClick={handleSaveProgress}
-                  className="flex items-center gap-1.5 px-3.5 py-1.5 bg-amber-500 hover:bg-amber-600 text-white rounded-xl text-xs font-black shadow-xs transition active:scale-95"
-                  title="Simpan cicilan nilai hingga butir soal saat ini"
+                  onClick={() => handleSaveProgress(true)}
+                  className="flex items-center gap-1.5 px-3.5 py-1.5 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 rounded-xl text-xs font-bold shadow-2xs transition active:scale-95 btn-tactile"
+                  title="Simpan cicilan nilai santri ini lalu kembali ke beranda untuk santri berikutnya"
                 >
-                  <Save className="w-3.5 h-3.5" />
-                  <span>Simpan Cicilan</span>
+                  <Save className="w-3.5 h-3.5 text-amber-700" />
+                  <span>Simpan & Ganti Santri</span>
                 </button>
               </div>
             </div>
@@ -1126,41 +1168,60 @@ export const ExamScoringView: React.FC<ExamScoringViewProps> = ({
               </div>
 
               {/* Tombol Navigasi Soal (Diposisikan langsung di bawah input skor) */}
-              <div className="flex flex-col sm:flex-row items-center justify-between gap-2.5 pt-2">
-                <button
-                  type="button"
-                  onClick={() => {
-                    triggerHaptic('light');
-                    setCurrentStep(prev => Math.max(1, prev - 1));
-                  }}
-                  disabled={currentStep === 1}
-                  className="w-full sm:w-auto px-5 py-3 rounded-xl border border-slate-200 text-slate-700 text-xs font-bold hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2 active:scale-95 btn-tactile"
-                >
-                  <ArrowLeft className="w-4 h-4 text-slate-500" />
-                  <span>Sebelumnya</span>
-                </button>
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5 pt-2">
+                {/* Sisi Kiri: Kembali ke Beranda & Soal Sebelumnya */}
+                <div className="flex items-center gap-2 w-full sm:w-auto">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      triggerHaptic('light');
+                      setCurrentStep(0);
+                    }}
+                    className="flex-1 sm:flex-none px-4 py-3 rounded-xl border border-slate-200 text-slate-700 text-xs font-bold hover:bg-slate-100 flex items-center justify-center gap-1.5 active:scale-95 btn-tactile"
+                    title="Kembali ke Beranda / Persiapan Ujian"
+                  >
+                    <Home className="w-4 h-4 text-slate-500" />
+                    <span>Beranda</span>
+                  </button>
 
-                {/* Tombol Simpan Cicilan */}
-                <button
-                  type="button"
-                  onClick={handleSaveProgress}
-                  className="w-full sm:w-auto px-5 py-3 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 rounded-xl text-xs font-bold shadow-2xs transition flex items-center justify-center gap-2 active:scale-95 btn-tactile"
-                >
-                  <Save className="w-4 h-4 text-amber-700" />
-                  <span>Simpan Progress (Cicilan)</span>
-                </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      triggerHaptic('light');
+                      setCurrentStep(prev => Math.max(1, prev - 1));
+                    }}
+                    disabled={currentStep === 1}
+                    className="flex-1 sm:flex-none px-4 py-3 rounded-xl border border-slate-200 text-slate-700 text-xs font-bold hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-1.5 active:scale-95 btn-tactile"
+                  >
+                    <ArrowLeft className="w-4 h-4 text-slate-500" />
+                    <span>Sebelumnya</span>
+                  </button>
+                </div>
 
-                <button
-                  type="button"
-                  onClick={() => {
-                    triggerHaptic('light');
-                    setCurrentStep(prev => prev + 1);
-                  }}
-                  className="w-full sm:w-auto px-6 py-3 bg-emerald-700 hover:bg-emerald-800 text-white rounded-xl text-xs font-bold shadow-md shadow-emerald-950/15 transition flex items-center justify-center gap-2 active:scale-95 btn-tactile"
-                >
-                  <span>{currentStep === totalQuestions ? 'Review Seluruh Nilai' : 'Soal Selanjutnya'}</span>
-                  <ArrowRight className="w-4 h-4" />
-                </button>
+                {/* Sisi Kanan: Simpan Sementara (Cicilan) & Soal Selanjutnya */}
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto">
+                  <button
+                    type="button"
+                    onClick={() => handleSaveProgress(true)}
+                    className="w-full sm:w-auto px-4 py-3 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 rounded-xl text-xs font-bold shadow-2xs transition flex items-center justify-center gap-2 active:scale-95 btn-tactile"
+                    title="Simpan cicilan nilai santri ini lalu kembali ke beranda untuk santri lainnya"
+                  >
+                    <Save className="w-4 h-4 text-amber-700" />
+                    <span>Simpan & Ganti Santri</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      triggerHaptic('light');
+                      setCurrentStep(prev => prev + 1);
+                    }}
+                    className="w-full sm:w-auto px-5 py-3 bg-emerald-700 hover:bg-emerald-800 text-white rounded-xl text-xs font-bold shadow-md shadow-emerald-950/15 transition flex items-center justify-center gap-2 active:scale-95 btn-tactile"
+                  >
+                    <span>{currentStep === totalQuestions ? 'Review Seluruh Nilai' : 'Soal Selanjutnya'}</span>
+                    <ArrowRight className="w-4 h-4" />
+                  </button>
+                </div>
               </div>
 
               {/* Rincian Live Calculation Soal Ini (Hasil Sementara) */}
@@ -1408,19 +1469,38 @@ export const ExamScoringView: React.FC<ExamScoringViewProps> = ({
             </div>
 
             {/* Tombol Aksi Akhir */}
-            <div className="flex flex-col sm:flex-row items-center justify-end gap-3 pt-4 border-t border-slate-100">
-              <button
-                type="button"
-                onClick={() => setCurrentStep(totalQuestions)}
-                className="w-full sm:w-auto px-5 py-3 rounded-2xl border border-slate-300 text-slate-700 text-xs font-bold hover:bg-slate-100 active:scale-95"
-              >
-                Kembali Edit Soal Terakhir
-              </button>
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 pt-4 border-t border-slate-100">
+              <div className="flex items-center gap-2 w-full sm:w-auto">
+                <button
+                  type="button"
+                  onClick={() => {
+                    triggerHaptic('light');
+                    setCurrentStep(0);
+                  }}
+                  className="flex-1 sm:flex-none px-4 py-3 rounded-2xl border border-slate-300 text-slate-700 text-xs font-bold hover:bg-slate-100 active:scale-95 flex items-center justify-center gap-1.5 btn-tactile"
+                  title="Kembali ke Beranda / Persiapan Ujian"
+                >
+                  <Home className="w-4 h-4 text-slate-500" />
+                  <span>Beranda</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    triggerHaptic('light');
+                    setCurrentStep(totalQuestions);
+                  }}
+                  className="flex-1 sm:flex-none px-4 py-3 rounded-2xl border border-slate-300 text-slate-700 text-xs font-bold hover:bg-slate-100 active:scale-95 flex items-center justify-center gap-1.5 btn-tactile"
+                >
+                  <ArrowLeft className="w-4 h-4 text-slate-500" />
+                  <span>Edit Soal Terakhir</span>
+                </button>
+              </div>
 
               <button
                 type="button"
                 onClick={handleFinalSubmit}
-                className="w-full sm:w-auto px-7 py-3 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black rounded-2xl shadow-md hover:shadow-lg transition flex items-center justify-center gap-2 active:scale-95"
+                className="w-full sm:w-auto px-7 py-3 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black rounded-2xl shadow-md hover:shadow-lg transition flex items-center justify-center gap-2 active:scale-95 btn-tactile"
               >
                 <CheckCircle2 className="w-4 h-4" />
                 <span>Simpan Final ke Database Terpadu</span>
